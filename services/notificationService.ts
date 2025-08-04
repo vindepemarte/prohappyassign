@@ -11,7 +11,7 @@ import { UserRole } from '../types';
 //    - Name: VAPID_PUBLIC_KEY, Value: your-public-key
 //    - Name: VAPID_PRIVATE_KEY, Value: your-private-key
 // =================================================================================
-const VAPID_PUBLIC_KEY = 'BCKRNmBrJ2jvnezsPHWIuczhmP3bhxH6BCfzoeGGk39I2UObWJ4QeqULDW7M_iHA03xJD-XMh8lEvZYjdl8Sge0'; 
+const VAPID_PUBLIC_KEY = 'BCKRNmBrJ2jvnezsPHWIuczhmP3bhxH6BCfzoeGGk39I2UObWJ4QeqULDW7M_iHA03xJD-XMh8lEvZYjdl8Sge0'
 
 if (VAPID_PUBLIC_KEY.includes('REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY')) {
     console.warn(
@@ -123,20 +123,36 @@ interface NotificationPayload {
  */
 export const sendNotification = async ({ target, payload }: { target: NotificationTarget; payload: NotificationPayload }) => {
     try {
+        console.log('Sending notification:', { target, payload });
+        
         const { data, error } = await supabase.functions.invoke('send-push-notification', {
             body: { target, payload },
         });
 
         if (error) {
             console.error('Error invoking send-push-notification function:', error);
+            
+            // Handle specific error cases
+            if (error.message?.includes('VAPID keys missing')) {
+                throw new Error('Push notifications are not configured. Please contact support.');
+            }
+            
+            if (error.message?.includes('Failed to send a request')) {
+                throw new Error('Unable to connect to notification service. Please try again later.');
+            }
+            
             throw new Error(`Failed to send notification: ${error.message}`);
         }
 
         console.log('Notification function invoked successfully:', data);
         return data;
-    } catch (error) {
+    } catch (error: any) {
         console.error('Network error sending notification:', error);
-        // Don't throw for network errors, just log them
-        return { error: 'Network error' };
+        
+        // Return a user-friendly error instead of throwing
+        return { 
+            error: error.message || 'Failed to send notification. Please try again later.',
+            success: false 
+        };
     }
 };
