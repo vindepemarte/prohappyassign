@@ -16,11 +16,14 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Install serve globally for production static file serving
+RUN npm install -g serve
+
 # Remove dev dependencies after build to reduce image size
 RUN npm prune --production
 
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"]
+# Start the application with serve
+CMD ["serve", "-s", "dist", "-l", "3000"]
