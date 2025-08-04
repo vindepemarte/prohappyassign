@@ -11,7 +11,7 @@ import { UserRole } from '../types';
 //    - Name: VAPID_PUBLIC_KEY, Value: your-public-key
 //    - Name: VAPID_PRIVATE_KEY, Value: your-private-key
 // =================================================================================
-const VAPID_PUBLIC_KEY = 'BCKRNmBrJ2jvnezsPHWIuczhmP3bhxH6BCfzoeGGk39I2UObWJ4QeqULDW7M_iHA03xJD-XMh8lEvZYjdl8Sge0';
+const VAPID_PUBLIC_KEY = 'BCKRNmBrJ2jvnezsPHWIuczhmP3bhxH6BCfzoeGGk39I2UObWJ4QeqULDW7M_iHA03xJD-XMh8lEvZYjdl8Sge0'; 
 
 if (VAPID_PUBLIC_KEY.includes('REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY')) {
     console.warn(
