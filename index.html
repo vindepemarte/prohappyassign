@@ -34,7 +34,7 @@
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     <script>
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then(registration => {
@@ -42,8 +42,11 @@
             })
             .catch(error => {
               console.error('Service Worker registration failed:', error);
+              // Don't fail the app if service worker fails
             });
         });
+      } else if ('serviceWorker' in navigator) {
+        console.warn('Service Worker requires HTTPS or localhost');
       }
     </script>
   </body>

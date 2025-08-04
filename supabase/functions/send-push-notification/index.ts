@@ -24,11 +24,15 @@ const corsHeaders = {
 if (!vapidPublicKey || !vapidPrivateKey) {
   console.error('VAPID keys are not set in environment variables.');
 } else {
-  webpush.setVapidDetails(
-    'mailto:support@prohappyassignments.com',
-    vapidPublicKey,
-    vapidPrivateKey
-  );
+  try {
+    webpush.setVapidDetails(
+      'mailto:support@prohappyassignments.com',
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+  } catch (error) {
+    console.error('Error setting VAPID details:', error);
+  }
 }
 
 // req is typed as 'any' because with 'Deno' being 'any', type inference for the request object is lost.
@@ -39,6 +43,16 @@ Deno.serve(async (req: any) => {
   }
 
   try {
+    // Check if VAPID keys are configured
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      return new Response(JSON.stringify({ 
+        error: 'Push notifications not configured. VAPID keys missing.' 
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     const { target, payload } = await req.json();
 
     if (!target || !payload || !payload.title || !payload.body) {
