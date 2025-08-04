@@ -1,0 +1,23 @@
+{
+  "name": "ProHappyAssignments",
+  "short_name": "ProHappy",
+  "description": "An application for assignment assistance in the UK, designed with a friendly and modern user interface.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#4A90E2",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
