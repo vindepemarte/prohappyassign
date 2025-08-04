@@ -2,7 +2,11 @@ const CACHE_NAME = 'prohappy-cache-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/logo.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/favicon.ico'
 ];
 
 self.addEventListener('install', event => {
