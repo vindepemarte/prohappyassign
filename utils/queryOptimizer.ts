@@ -58,8 +58,8 @@ class QueryOptimizer {
           .from('projects')
           .select(`
             *,
-            client:profiles!projects_client_id_fkey(id, full_name, email),
-            worker:profiles!projects_worker_id_fkey(id, full_name, email)
+            client:users!projects_client_id_fkey(id, full_name),
+            worker:users!projects_worker_id_fkey(id, full_name)
           `, { count: 'exact' })
           .eq('worker_id', workerId);
 
@@ -125,8 +125,8 @@ class QueryOptimizer {
           .from('projects')
           .select(`
             *,
-            client:profiles!projects_client_id_fkey(id, full_name, email),
-            worker:profiles!projects_worker_id_fkey(id, full_name, email)
+            client:users!projects_client_id_fkey(id, full_name),
+            worker:users!projects_worker_id_fkey(id, full_name)
           `, { count: 'exact' });
 
         // Apply filters
@@ -185,7 +185,18 @@ class QueryOptimizer {
     } = options;
 
     if (useCache) {
-      const cached = analyticsCache.get(cacheKey);
+      const cached = analyticsCache.get<{
+        totalProjects: number;
+        totalRevenue: number;
+        totalProfit: number;
+        clientCount: number;
+        monthlyData: Array<{
+          month: string;
+          projects: number;
+          revenue: number;
+          profit: number;
+        }>;
+      }>(cacheKey);
       if (cached) {
         return cached;
       }
@@ -214,7 +225,7 @@ class QueryOptimizer {
         // Process data in memory for better performance
         const projects = data || [];
         const uniqueClients = new Set(projects.map(p => p.client_id));
-        
+
         const totalRevenue = projects.reduce((sum, p) => sum + (p.total_price || 0), 0);
         const totalProfit = projects.reduce((sum, p) => sum + ((p.total_price || 0) - (p.worker_payment || 0)), 0);
 
@@ -284,7 +295,7 @@ class QueryOptimizer {
     let fetchedUsers: Profile[] = [];
     if (uncachedIds.length > 0) {
       const { data, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
         .in('id', uncachedIds);
 
