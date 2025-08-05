@@ -50,7 +50,7 @@ const Select: React.FC<SelectProps> = ({
       )
     : options;
 
-  const selectedOption = options.find(option => option.value === value);
+  const selectedOption = options?.find(option => option.value === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -79,7 +79,7 @@ const Select: React.FC<SelectProps> = ({
   };
 
   const handleOptionClick = (optionValue: string) => {
-    if (!options.find(opt => opt.value === optionValue)?.disabled) {
+    if (!options?.find(opt => opt.value === optionValue)?.disabled) {
       onChange(optionValue);
       setIsOpen(false);
       setSearchTerm('');

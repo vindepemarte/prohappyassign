@@ -18,13 +18,31 @@ const App: React.FC = () => {
 
   // Initialize order references, notification system, and performance monitoring on app startup
   useEffect(() => {
-    // Initialize performance monitoring immediately
-    performanceMonitor.initialize();
-    
-    if (session) {
-      initializeOrderReferences();
-      initializeNotificationSystem();
-    }
+    const initializeApp = async () => {
+      try {
+        // Initialize performance monitoring immediately
+        performanceMonitor.initialize();
+        
+        if (session) {
+          // Initialize services with error handling
+          try {
+            await initializeOrderReferences();
+          } catch (error) {
+            console.error('Failed to initialize order references:', error);
+          }
+          
+          try {
+            await initializeNotificationSystem();
+          } catch (error) {
+            console.error('Failed to initialize notification system:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+      }
+    };
+
+    initializeApp();
 
     // Cleanup on unmount
     return () => {

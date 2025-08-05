@@ -20,6 +20,12 @@ const PROJECT_COLUMNS = 'id, client_id, worker_id, agent_id, title, description,
 export const calculatePrice = (wordCount: number): number => {
     if (wordCount <= 0) return 0;
 
+    // Defensive check to ensure PRICING_TABLE is available
+    if (!PRICING_TABLE || !Array.isArray(PRICING_TABLE) || PRICING_TABLE.length === 0) {
+        console.error('PRICING_TABLE is not available or empty');
+        return 0;
+    }
+
     const tier = PRICING_TABLE.find(p => wordCount <= p.maxWords);
     return tier ? tier.price : PRICING_TABLE[PRICING_TABLE.length - 1].price; // Default to max price if over
 };

@@ -507,7 +507,7 @@ const AgentDashboard: React.FC = () => {
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">Manage Worker:</label>
                                                     {project.worker_id ? (
-                                                        <p className="text-sm text-gray-600 bg-slate-200 p-2 rounded-lg">Assigned to: {workers.find(w => w.id === project.worker_id)?.full_name || 'Unknown Worker'}</p>
+                                                        <p className="text-sm text-gray-600 bg-slate-200 p-2 rounded-lg">Assigned to: {workers?.find(w => w.id === project.worker_id)?.full_name || 'Unknown Worker'}</p>
                                                     ) : (
                                                         <div className="flex space-x-2">
                                                             <Select
