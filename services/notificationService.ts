@@ -236,7 +236,10 @@ export const subscribeUser = async (userId: string) => {
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
             console.warn('Push notification permission denied.');
-            return null;
+            const message = permission === 'denied' 
+                ? 'Notifications are blocked. Please click the lock icon in your address bar, allow notifications, and refresh the page.'
+                : 'Notification permission is required to receive updates.';
+            throw new Error(message);
         }
 
         const registration = await navigator.serviceWorker.ready;
@@ -284,6 +287,53 @@ interface NotificationPayload {
     title: string;
     body: string;
 }
+
+/**
+ * Gets detailed notification permission status with user-friendly messages
+ */
+export const getNotificationPermissionStatus = () => {
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+        return {
+            supported: false,
+            permission: 'unsupported',
+            message: 'Push notifications are not supported in this browser.',
+            canRequest: false
+        };
+    }
+
+    const permission = Notification.permission;
+    
+    switch (permission) {
+        case 'granted':
+            return {
+                supported: true,
+                permission: 'granted',
+                message: 'Notifications are enabled.',
+                canRequest: false
+            };
+        case 'denied':
+            return {
+                supported: true,
+                permission: 'denied',
+                message: 'Notifications are blocked. Click the lock icon in your address bar to allow notifications.',
+                canRequest: false
+            };
+        case 'default':
+            return {
+                supported: true,
+                permission: 'default',
+                message: 'Click to enable notifications.',
+                canRequest: true
+            };
+        default:
+            return {
+                supported: true,
+                permission: 'unknown',
+                message: 'Notification permission status unknown.',
+                canRequest: true
+            };
+    }
+};
 
 /**
  * Fallback function to log notifications directly to database when edge function fails

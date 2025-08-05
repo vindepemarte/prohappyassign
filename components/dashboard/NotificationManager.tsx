@@ -45,7 +45,12 @@ const NotificationManager: React.FC = () => {
             // Optionally show a success message
         } catch (err) {
             if (err instanceof Error) {
-                setError(err.message);
+                // Provide specific guidance for permission issues
+                if (err.message.includes('permission') || Notification.permission === 'denied') {
+                    setError('Notifications are blocked. Please click the lock icon in your address bar and allow notifications, then refresh the page.');
+                } else {
+                    setError(err.message);
+                }
                 console.error("Subscription failed:", err.message);
             }
             // If permission was denied, don't show the banner again this session.
