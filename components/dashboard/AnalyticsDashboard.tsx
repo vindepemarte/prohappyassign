@@ -3,8 +3,7 @@ import { Project } from '../../types';
 import { TimeFilter } from '../common/FilterBar';
 import { ProfitCalculator } from '../../utils/profitCalculator';
 import { queryOptimizer } from '../../utils/queryOptimizer';
-import LoadingWrapper from '../common/LoadingWrapper';
-import { useLoadingState } from '../../hooks/useLoadingState';
+// Removed unused imports - LoadingWrapper and useLoadingState
 
 interface AnalyticsDashboardProps {
   projects: Project[];
@@ -23,38 +22,7 @@ interface MonthlyData {
 }
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ projects, timeFilter }) => {
-  const [optimizedData, setOptimizedData] = useState<any>(null);
-  const [loadingState, loadingActions] = useLoadingState({
-    timeout: 10000,
-    maxRetries: 1
-  });
-
-  // Try to use optimized analytics when possible
-  useEffect(() => {
-    const loadOptimizedAnalytics = async () => {
-      // Only use optimized analytics for time-based filters
-      if (timeFilter.type === 'custom' && timeFilter.startDate && timeFilter.endDate) {
-        try {
-          loadingActions.startLoading();
-          const data = await queryOptimizer.getAnalyticsData(
-            timeFilter.startDate,
-            timeFilter.endDate,
-            { useCache: true }
-          );
-          setOptimizedData(data);
-          loadingActions.stopLoading();
-        } catch (error) {
-          loadingActions.setError('Failed to load optimized analytics');
-          setOptimizedData(null);
-        }
-      } else {
-        setOptimizedData(null);
-        loadingActions.reset();
-      }
-    };
-
-    loadOptimizedAnalytics();
-  }, [timeFilter, loadingActions]);
+  // Removed unused optimized data loading - using direct calculations instead
   const analyticsData = useMemo(() => {
     // Get monthly trends for the last 12 months
     const monthlyTrends = ProfitCalculator.calculateMonthlyProfitTrends(projects, 12);
