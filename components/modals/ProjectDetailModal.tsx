@@ -30,22 +30,22 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState<ModalTab>('overview');
-    
+
     // States for forms
     const [finalFiles, setFinalFiles] = useState<File[]>([]);
     const [newWordCount, setNewWordCount] = useState<number>(0);
     const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
     const [formError, setFormError] = useState('');
-    
+
     // Cancellation states
     const [cancellationReason, setCancellationReason] = useState('');
     const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
-    
+
     // Deadline extension states
     const [requestedDeadline, setRequestedDeadline] = useState('');
     const [extensionReason, setExtensionReason] = useState('');
     const [deadlineExtensions, setDeadlineExtensions] = useState<any[]>([]);
-    
+
     // Deadline adjustment states
     const [newDeadline, setNewDeadline] = useState('');
 
@@ -68,26 +68,25 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
             const data = await getProjectDetails(projectId);
             setProject(data);
             setNewWordCount(data.adjusted_word_count || data.initial_word_count);
-            
+
             // Set minimum deadline to tomorrow
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
-            setRequestedDeadline(tomorrow.toISOString().split('T')[0]);
-            
+            const tomorrowString = tomorrow.toISOString().split('T')[0];
+            setRequestedDeadline(tomorrowString);
+
             // Set deadline extensions from project data
             setDeadlineExtensions(data.deadline_extension_requests || []);
-            
-            // Set new deadline to tomorrow as minimum
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            setNewDeadline(tomorrow.toISOString().split('T')[0]);
+
+            // Set new deadline to tomorrow as minimum (reuse the same date)
+            setNewDeadline(tomorrowString);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to load project details.');
         } finally {
             setLoading(false);
         }
     };
-    
+
     const resetForms = () => {
         setFinalFiles([]);
         setNewWordCount(project?.initial_word_count || 0);
@@ -101,7 +100,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
         setRequestedDeadline(tomorrow.toISOString().split('T')[0]);
         setNewDeadline(tomorrow.toISOString().split('T')[0]);
     };
-    
+
     const handleFinalSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !project) return;
@@ -116,9 +115,9 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
             setFormError(e instanceof Error ? e.message : 'Submission failed.');
         }
     };
-    
+
     const handleAdjustSubmit = async (e: React.FormEvent) => {
-         e.preventDefault();
+        e.preventDefault();
         if (!user || !project) return;
         setFormStatus('submitting');
         setFormError('');
@@ -157,10 +156,10 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
     const handleDeadlineExtensionSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !project || !requestedDeadline || !extensionReason.trim()) return;
-        
+
         setFormStatus('submitting');
         setFormError('');
-        
+
         try {
             const deadlineDate = new Date(requestedDeadline);
             await requestDeadlineExtension(project.id, deadlineDate, extensionReason, user.id);
@@ -175,10 +174,10 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
     const handleDeadlineAdjustSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !project || !newDeadline) return;
-        
+
         setFormStatus('submitting');
         setFormError('');
-        
+
         try {
             const deadlineDate = new Date(newDeadline);
             await requestDeadlineChange(project.id, deadlineDate);
@@ -212,7 +211,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                 </div>
             )
         }
-        
+
         switch (activeTab) {
             case 'overview':
                 const initialFiles = project.project_files.filter(f => f.purpose === 'initial_brief');
@@ -253,7 +252,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                             )}
                                             <p className="text-sm font-semibold text-gray-800">Requested on: {requestDate.toLocaleString()}</p>
                                             <p className="mt-2 text-gray-800 whitespace-pre-wrap">{req.instructions}</p>
-                                            
+
                                             {relevantFiles.length > 0 && (
                                                 <div className="mt-3 pt-3 border-t border-yellow-200">
                                                     <h6 className="font-semibold text-sm text-gray-700">Associated Files:</h6>
@@ -282,18 +281,18 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                 Upload your completed assignment files. This will notify the agent for final review.
                             </p>
                         </div>
-                        
+
                         <div className="space-y-4">
                             <FileInput onFilesSelected={setFinalFiles} maxFiles={10} />
-                            
+
                             {formError && (
                                 <div className="error-message bg-red-50 border border-red-200 rounded-xl p-4">
                                     <p className="text-red-600 font-medium">{formError}</p>
                                 </div>
                             )}
-                            
-                            <Button 
-                                type="submit" 
+
+                            <Button
+                                type="submit"
                                 disabled={formStatus === 'submitting' || finalFiles.length === 0}
                                 className="btn-enhanced"
                             >
@@ -321,9 +320,9 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                 If the initial word count was incorrect, you can request an adjustment here. This will send a new quote to the client for approval.
                             </p>
                         </div>
-                        
+
                         <div className="space-y-4">
-                            <Input 
+                            <Input
                                 label="New Word Count"
                                 type="number"
                                 value={newWordCount}
@@ -331,16 +330,16 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                 required
                                 className="form-input"
                             />
-                            
+
                             {formError && (
                                 <div className="error-message bg-red-50 border border-red-200 rounded-xl p-4">
                                     <p className="text-red-600 font-medium">{formError}</p>
                                 </div>
                             )}
-                            
-                            <Button 
-                                type="submit" 
-                                variant="secondary" 
+
+                            <Button
+                                type="submit"
+                                variant="secondary"
                                 disabled={formStatus === 'submitting' || newWordCount === project.initial_word_count}
                                 className="btn-enhanced"
                             >
@@ -365,11 +364,11 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                 Cancel Project
                             </h4>
                             <p className="text-red-700 leading-relaxed">
-                                Cancelling this project will set its status to "refund" and notify the agent to process a refund for the client. 
+                                Cancelling this project will set its status to "refund" and notify the agent to process a refund for the client.
                                 This action cannot be undone.
                             </p>
                         </div>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-3">
@@ -389,7 +388,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                     <p className="text-red-600 font-medium">{formError}</p>
                                 </div>
                             )}
-                            <Button 
+                            <Button
                                 onClick={handleCancelClick}
                                 variant="danger"
                                 disabled={formStatus === 'submitting' || !cancellationReason.trim()}
@@ -411,7 +410,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                 const currentDeadline = new Date(project.deadline);
                 const minDate = new Date();
                 minDate.setDate(minDate.getDate() + 1);
-                
+
                 return (
                     <div className="space-y-4">
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -420,7 +419,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                 Current deadline: <strong>{currentDeadline.toLocaleDateString()}</strong>
                             </p>
                             <p className="text-sm text-blue-700">
-                                If you need more time to complete this project, you can request a deadline extension. 
+                                If you need more time to complete this project, you can request a deadline extension.
                                 The client and agent will be notified of your request.
                             </p>
                         </div>
@@ -431,11 +430,10 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                 <h5 className="font-semibold text-gray-800 mb-3">Previous Extension Requests</h5>
                                 <div className="space-y-2">
                                     {deadlineExtensions.map((extension, index) => (
-                                        <div key={extension.id} className={`p-3 rounded-lg border ${
-                                            extension.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
-                                            extension.status === 'approved' ? 'bg-green-50 border-green-200' :
-                                            'bg-red-50 border-red-200'
-                                        }`}>
+                                        <div key={extension.id} className={`p-3 rounded-lg border ${extension.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
+                                                extension.status === 'approved' ? 'bg-green-50 border-green-200' :
+                                                    'bg-red-50 border-red-200'
+                                            }`}>
                                             <div className="flex justify-between items-start">
                                                 <div>
                                                     <p className="text-sm font-medium">
@@ -445,11 +443,10 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                                         {extension.reason}
                                                     </p>
                                                 </div>
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                                    extension.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                    extension.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                    'bg-red-100 text-red-800'
-                                                }`}>
+                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${extension.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                        extension.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                                            'bg-red-100 text-red-800'
+                                                    }`}>
                                                     {extension.status.charAt(0).toUpperCase() + extension.status.slice(1)}
                                                 </span>
                                             </div>
@@ -476,7 +473,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                     Must be later than the current deadline ({currentDeadline.toLocaleDateString()})
                                 </p>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Reason for Extension *
@@ -490,10 +487,10 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                     required
                                 />
                             </div>
-                            
+
                             {formError && <p className="text-sm text-center text-red-600">{formError}</p>}
-                            
-                            <Button 
+
+                            <Button
                                 type="submit"
                                 disabled={formStatus === 'submitting' || !requestedDeadline || !extensionReason.trim()}
                                 className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600"
@@ -506,7 +503,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
             case 'adjustDeadline':
                 const minDeadlineDate = new Date();
                 minDeadlineDate.setDate(minDeadlineDate.getDate() + 1);
-                
+
                 return (
                     <form onSubmit={handleDeadlineAdjustSubmit} className="space-y-6">
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
@@ -518,14 +515,14 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                 If you need to change the project deadline, you can request an adjustment here. This will send a new quote to the client for approval with updated pricing.
                             </p>
                         </div>
-                        
+
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Current Deadline: <strong>{new Date(project.deadline).toLocaleDateString()}</strong>
                                 </label>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     New Deadline *
@@ -542,16 +539,16 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                     The new deadline will affect the project pricing based on urgency.
                                 </p>
                             </div>
-                            
+
                             {formError && (
                                 <div className="error-message bg-red-50 border border-red-200 rounded-xl p-4">
                                     <p className="text-red-600 font-medium">{formError}</p>
                                 </div>
                             )}
-                            
-                            <Button 
-                                type="submit" 
-                                variant="secondary" 
+
+                            <Button
+                                type="submit"
+                                variant="secondary"
                                 disabled={formStatus === 'submitting' || !newDeadline}
                                 className="btn-enhanced"
                             >
@@ -569,17 +566,16 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                 )
         }
     };
-    
+
     const TabButton: React.FC<{ tabId: ModalTab; children: React.ReactNode }> = ({ tabId, children }) => (
         <button
             onClick={() => { setActiveTab(tabId); resetForms(); }}
             className={`
                 px-6 py-3 font-semibold text-sm rounded-t-xl transition-all duration-200 
-                tab-button relative ${
-                activeTab === tabId
+                tab-button relative ${activeTab === tabId
                     ? 'active text-blue-600 bg-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-            }`}
+                }`}
         >
             {children}
         </button>
@@ -608,7 +604,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                         <span className="ml-3 text-gray-600">Loading project details...</span>
                     </div>
                 )}
-                
+
                 {error && (
                     <div className="text-center py-10">
                         <div className="error-message bg-red-50 border border-red-200 rounded-xl p-6">
@@ -617,7 +613,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                         </div>
                     </div>
                 )}
-                
+
                 {!loading && !error && project && (
                     <div>
                         <div className="bg-gray-50 rounded-xl p-1 mb-6 flex flex-wrap gap-1">
@@ -627,19 +623,19 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                             <TabButton tabId="adjust">Adjust Scope</TabButton>
                             <TabButton tabId="adjustDeadline">Adjust Deadline</TabButton>
                             {/* Show deadline extension tab only for workers and active projects */}
-                            {user?.role === 'worker' && project.worker_id === user.id && 
-                             !['completed', 'cancelled', 'refund'].includes(project.status) && (
-                                <TabButton tabId="deadline">Request Deadline</TabButton>
-                            )}
+                            {user?.role === 'worker' && project.worker_id === user.id &&
+                                !['completed', 'cancelled', 'refund'].includes(project.status) && (
+                                    <TabButton tabId="deadline">Request Deadline</TabButton>
+                                )}
                             {/* Show cancel tab only for workers and cancellable projects */}
-                            {user?.role === 'worker' && project.worker_id === user.id && 
-                             !['completed', 'cancelled', 'refund'].includes(project.status) && (
-                                <TabButton tabId="cancel">
-                                    <span className="text-red-600">Cancel Project</span>
-                                </TabButton>
-                            )}
+                            {user?.role === 'worker' && project.worker_id === user.id &&
+                                !['completed', 'cancelled', 'refund'].includes(project.status) && (
+                                    <TabButton tabId="cancel">
+                                        <span className="text-red-600">Cancel Project</span>
+                                    </TabButton>
+                                )}
                         </div>
-                        
+
                         <div className="min-h-[400px]">
                             {renderTabContent()}
                         </div>
