@@ -1,14 +1,45 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs');
+import express from 'express';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Add request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
+});
+
+// Add cache-busting headers for HTML files
+app.use((req, res, next) => {
+  if (req.url.endsWith('.html') || req.url === '/') {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
+
+// Check if dist directory exists
+const distPath = path.join(__dirname, 'dist');
+if (!fs.existsSync(distPath)) {
+  console.error('ERROR: dist directory not found at', distPath);
+  process.exit(1);
+}
+
+console.log('Dist directory contents:', fs.readdirSync(distPath));
+
 // Serve static files from dist directory
-app.use(express.static(path.join(__dirname, 'dist'), {
+app.use(express.static(distPath, {
   setHeaders: (res, filePath) => {
-    // Set proper MIME types
+    console.log('Serving file:', filePath);
+    
+    // Set proper MIME types and cache headers
     if (filePath.endsWith('.css')) {
       res.setHeader('Content-Type', 'text/css; charset=utf-8');
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
@@ -19,6 +50,9 @@ app.use(express.static(path.join(__dirname, 'dist'), {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
     } else if (filePath.endsWith('sw.js')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    } else if (filePath.endsWith('.html')) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
   }
@@ -37,18 +71,23 @@ app.get('/healthz', (req, res) => {
 app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'dist', 'index.html');
   
+  console.log('Fallback route hit for:', req.url);
+  
   // Check if the requested file exists in dist
   const requestedFile = path.join(__dirname, 'dist', req.path);
   
   if (fs.existsSync(requestedFile) && fs.statSync(requestedFile).isFile()) {
-    // File exists, let express.static handle it
+    console.log('Serving existing file:', requestedFile);
     return res.sendFile(requestedFile);
   }
   
   // File doesn't exist, serve index.html for SPA routing
   if (fs.existsSync(indexPath)) {
+    console.log('Serving index.html for SPA routing');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(indexPath);
   } else {
+    console.error('index.html not found at:', indexPath);
     res.status(404).send('Application not found');
   }
 });

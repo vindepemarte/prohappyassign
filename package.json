@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
+    "verify": "node verify-deployment.js",
+    "deploy": "npm run build && npm run verify",
     "test": "vitest",
     "test:run": "vitest run",
     "test:ui": "vitest --ui"
