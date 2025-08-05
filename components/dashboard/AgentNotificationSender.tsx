@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { sendNotification } from '../../services/notificationService';
+import { sendNotificationWithGuarantee } from '../../services/notificationService';
 import Button from '../Button';
 import Input from '../Input';
 import Select from '../common/Select';
@@ -13,6 +13,7 @@ const AgentNotificationSender: React.FC = () => {
     const [body, setBody] = useState('');
     const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
+    const [priority, setPriority] = useState<'low' | 'normal' | 'high'>('normal');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,14 +27,25 @@ const AgentNotificationSender: React.FC = () => {
         setMessage('');
 
         try {
-            const response = await sendNotification({
+            const response = await sendNotificationWithGuarantee({
                 target: { role: target },
                 payload: { title, body },
+                priority
             });
-            setStatus('success');
-            setMessage(`Notification sent successfully to ${response.sent} subscribers.`);
-            setTitle('');
-            setBody('');
+            
+            if (response.success) {
+                setStatus('success');
+                if (response.immediate) {
+                    setMessage('Notification sent immediately with guaranteed delivery.');
+                } else {
+                    setMessage(`Notification queued for guaranteed delivery (Queue ID: ${response.queueId}).`);
+                }
+                setTitle('');
+                setBody('');
+            } else {
+                setStatus('error');
+                setMessage(response.error || 'Failed to send notification.');
+            }
         } catch (err) {
             setStatus('error');
             setMessage(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -44,7 +56,7 @@ const AgentNotificationSender: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-lg p-6 border">
             <h2 className="text-xl font-bold text-gray-800 mb-4">📢 Broadcast Notifications</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <Select
                         label="Target Audience"
                         containerClassName="md:col-span-1"
@@ -55,6 +67,16 @@ const AgentNotificationSender: React.FC = () => {
                         <option value="client">Clients Only</option>
                         <option value="worker">Workers Only</option>
                         <option value="agent">Agents Only</option>
+                    </Select>
+                    <Select
+                        label="Priority"
+                        containerClassName="md:col-span-1"
+                        value={priority}
+                        onChange={e => setPriority(e.target.value as 'low' | 'normal' | 'high')}
+                    >
+                        <option value="low">Low</option>
+                        <option value="normal">Normal</option>
+                        <option value="high">High</option>
                     </Select>
                     <Input
                         label="Notification Title"

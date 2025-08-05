@@ -4,6 +4,7 @@ import { submitChangeRequest } from '../../services/assignmentService';
 import { ChangesFormData } from '../../types';
 import Button from '../Button';
 import FileInput from '../common/FileInput';
+import EnhancedModal from '../common/EnhancedModal';
 import { COLORS } from '../../constants';
 
 interface ModalProps {
@@ -52,49 +53,79 @@ const RequestChangesModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8 space-y-6" onClick={e => e.stopPropagation()}>
-                <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-800">Request Changes</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 font-bold text-2xl">&times;</button>
-                </div>
-                
-                {status === 'success' ? (
-                     <div className="text-center space-y-4 p-6 rounded-2xl bg-green-50 border border-green-200">
-                        <h3 className="text-xl font-bold text-green-700">Request Submitted!</h3>
-                        <p className="text-gray-600">Your change request has been sent. The project status has been updated.</p>
+        <EnhancedModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Request Changes"
+            size="md"
+        >
+            {status === 'success' ? (
+                <div className="text-center py-12">
+                    <div className="success-message bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-200">
+                        <div className="text-6xl mb-4">✅</div>
+                        <h3 className="text-2xl font-bold text-green-700 mb-3">Request Submitted!</h3>
+                        <p className="text-green-600 text-lg">Your change request has been sent. The project status has been updated.</p>
                     </div>
-                ) : (
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label htmlFor="instructions" className="text-sm font-bold text-gray-600 mb-2 block">Instructions*</label>
-                            <textarea
-                                id="instructions"
-                                name="instructions"
-                                placeholder="Clearly describe the changes you need..."
-                                className="w-full bg-gray-50 border-2 border-gray-200 rounded-xl p-4 text-base text-gray-800 focus:outline-none focus:border-[#4A90E2] transition-colors h-32"
-                                value={instructions}
-                                onChange={e => setInstructions(e.target.value)}
-                                required
-                            />
-                        </div>
-                        
-                        <div>
-                            <p className="text-sm font-bold text-gray-600 mb-2 block">Upload Additional Files (optional)</p>
-                            <FileInput onFilesSelected={setFiles} maxFiles={5} />
-                        </div>
+                </div>
+            ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                        <h4 className="font-bold text-lg text-blue-800 mb-2 flex items-center">
+                            <span className="text-2xl mr-3">📝</span>
+                            Change Instructions
+                        </h4>
+                        <p className="text-blue-700">
+                            Clearly describe what changes you need. Be specific to help the worker understand your requirements.
+                        </p>
+                    </div>
 
-                        {status === 'error' && <p className="text-sm text-center" style={{ color: COLORS.red }}>{error}</p>}
+                    <div>
+                        <label htmlFor="instructions" className="text-sm font-bold text-gray-700 mb-3 block">
+                            Instructions *
+                        </label>
+                        <textarea
+                            id="instructions"
+                            name="instructions"
+                            placeholder="Clearly describe the changes you need..."
+                            className="form-input w-full rounded-xl p-4 text-base h-32 resize-none focus:outline-none"
+                            value={instructions}
+                            onChange={e => setInstructions(e.target.value)}
+                            required
+                        />
+                    </div>
+                    
+                    <div>
+                        <p className="text-sm font-bold text-gray-700 mb-3 block">
+                            Upload Additional Files (optional)
+                        </p>
+                        <FileInput onFilesSelected={setFiles} maxFiles={5} />
+                    </div>
 
-                        <div className="pt-4">
-                            <Button type="submit" disabled={status === 'submitting' || !isFormValid} className="w-full">
-                                {status === 'submitting' ? 'Submitting...' : 'Submit Request'}
-                            </Button>
+                    {status === 'error' && (
+                        <div className="error-message bg-red-50 border border-red-200 rounded-xl p-4">
+                            <p className="text-red-600 font-medium">{error}</p>
                         </div>
-                    </form>
-                )}
-            </div>
-        </div>
+                    )}
+
+                    <div className="pt-4">
+                        <Button 
+                            type="submit" 
+                            disabled={status === 'submitting' || !isFormValid} 
+                            className="w-full btn-enhanced"
+                        >
+                            {status === 'submitting' ? (
+                                <div className="flex items-center justify-center space-x-2">
+                                    <div className="loading-spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                    <span>Submitting...</span>
+                                </div>
+                            ) : (
+                                'Submit Request'
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            )}
+        </EnhancedModal>
     );
 };
 

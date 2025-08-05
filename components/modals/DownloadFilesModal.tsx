@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getProjectDetails, downloadFile } from '../../services/assignmentService';
 import { ProjectFile } from '../../types';
 import Button from '../Button';
+import EnhancedModal from '../common/EnhancedModal';
 
 interface ModalProps {
     isOpen: boolean;
@@ -64,42 +65,80 @@ const DownloadFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8 space-y-6" onClick={e => e.stopPropagation()}>
-                <div className="flex justify-between items-center border-b pb-4">
-                    <h2 className="text-2xl font-bold text-gray-800">Download Final Files</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-700 font-bold text-2xl">&times;</button>
+        <EnhancedModal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Download Final Files"
+            size="md"
+        >
+            {loading && (
+                <div className="flex justify-center items-center py-12">
+                    <div className="loading-spinner w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                    <span className="ml-3 text-gray-600">Loading files...</span>
                 </div>
-                
-                {loading && <p className="text-center text-gray-500">Loading files...</p>}
-                {error && <p className="text-center text-red-500">{error}</p>}
+            )}
+            
+            {error && (
+                <div className="error-message bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+                    <div className="text-red-600 font-semibold">{error}</div>
+                </div>
+            )}
 
-                {!loading && !error && (
-                    <div className="space-y-3 max-h-80 overflow-y-auto">
-                        {files.length === 0 ? (
-                            <p className="text-center text-gray-500 py-4">No final files have been uploaded yet.</p>
-                        ) : (
-                            files.map((file, index) => (
-                                <div key={file.id} className={`p-3 rounded-lg flex justify-between items-center ${index === 0 ? 'bg-green-50 border border-green-200' : 'bg-slate-50'}`}>
-                                    <div>
-                                        <p className="font-semibold text-gray-800">{file.file_name}</p>
-                                        <p className="text-xs text-gray-500">Uploaded: {new Date(file.uploaded_at).toLocaleString()}</p>
-                                        {index === 0 && <p className="text-xs font-bold text-green-700">Latest Version</p>}
-                                    </div>
-                                    <Button
-                                        onClick={() => handleDownload(file)}
-                                        className="!w-auto py-2 px-4 text-sm"
-                                        disabled={downloading[file.id]}
-                                    >
-                                        {downloading[file.id] ? <DownloadSpinner /> : 'Download'}
-                                    </Button>
+            {!loading && !error && (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {files.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="text-6xl mb-4">📁</div>
+                            <p className="text-gray-500 text-lg">No final files have been uploaded yet.</p>
+                        </div>
+                    ) : (
+                        files.map((file, index) => (
+                            <div 
+                                key={file.id} 
+                                className={`
+                                    p-4 rounded-xl flex justify-between items-center transition-all duration-200
+                                    ${index === 0 
+                                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 shadow-sm' 
+                                        : 'bg-gray-50 border border-gray-200 hover:bg-gray-100'
+                                    }
+                                `}
+                            >
+                                <div className="flex-1">
+                                    <p className="font-semibold text-gray-800 mb-1">{file.file_name}</p>
+                                    <p className="text-sm text-gray-500">
+                                        Uploaded: {new Date(file.uploaded_at).toLocaleString()}
+                                    </p>
+                                    {index === 0 && (
+                                        <div className="mt-2">
+                                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800">
+                                                ✨ Latest Version
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                            ))
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
+                                <Button
+                                    onClick={() => handleDownload(file)}
+                                    className="!w-auto py-2 px-4 text-sm btn-enhanced ml-4"
+                                    disabled={downloading[file.id]}
+                                >
+                                    {downloading[file.id] ? (
+                                        <div className="flex items-center space-x-2">
+                                            <div className="loading-spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                            <span>Downloading...</span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center space-x-2">
+                                            <span>📥</span>
+                                            <span>Download</span>
+                                        </div>
+                                    )}
+                                </Button>
+                            </div>
+                        ))
+                    )}
+                </div>
+            )}
+        </EnhancedModal>
     );
 };
 

@@ -21,6 +21,8 @@ const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
         needs_changes: 'bg-yellow-100 text-yellow-800',
         pending_final_approval: 'bg-indigo-100 text-indigo-800',
         completed: 'bg-green-100 text-green-800',
+        refund: 'bg-red-100 text-red-800',
+        cancelled: 'bg-gray-100 text-gray-800',
     };
     const formattedStatus = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     return (
@@ -159,6 +161,11 @@ const MyProjects: React.FC = () => {
                                             ACTION REQUIRED: New Quote Proposed
                                         </div>
                                         <p className="font-bold text-lg text-purple-800">{project.title}</p>
+                                        {project.order_reference && (
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                Order: <span className="font-mono font-semibold text-blue-600">{project.order_reference}</span>
+                                            </p>
+                                        )}
                                         <div className="mt-4 border-t pt-3 text-sm text-gray-700 grid grid-cols-2 gap-x-4 gap-y-2">
                                             <div>
                                                 <p className="font-semibold">Original:</p>
@@ -186,7 +193,14 @@ const MyProjects: React.FC = () => {
                                     <div className="flex flex-col sm:flex-row justify-between sm:items-center">
                                         <div>
                                             <p className="font-bold text-lg text-[#4A90E2]">{project.title}</p>
-                                            <p className="text-sm text-gray-500">Submitted: {new Date(project.created_at).toLocaleDateString()}</p>
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                                                <p className="text-sm text-gray-500">Submitted: {new Date(project.created_at).toLocaleDateString()}</p>
+                                                {project.order_reference && (
+                                                    <p className="text-sm text-gray-600">
+                                                        <span className="font-mono font-semibold text-blue-600">{project.order_reference}</span>
+                                                    </p>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="mt-2 sm:mt-0 text-left sm:text-right">
                                             <StatusBadge status={project.status} />

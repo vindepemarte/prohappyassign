@@ -10,8 +10,13 @@ export type ProjectStatus =
   | "pending_quote_approval"
   | "needs_changes"
   | "pending_final_approval"
-  | "completed";
+  | "completed"
+  | "refund"
+  | "cancelled";
 export type FilePurpose = "initial_brief" | "change_request" | "final_delivery";
+export type UrgencyLevel = "normal" | "moderate" | "urgent" | "rush";
+export type DeliveryStatus = "pending" | "sent" | "delivered" | "failed";
+export type ExtensionStatus = "pending" | "approved" | "rejected";
 
 export type Database = {
   public: {
@@ -49,6 +54,9 @@ export type Database = {
           adjusted_word_count: number | null
           cost_gbp: number
           deadline: string
+          order_reference: string | null
+          deadline_charge: number
+          urgency_level: UrgencyLevel
           created_at: string
           updated_at: string
         }
@@ -63,6 +71,9 @@ export type Database = {
           adjusted_word_count?: number | null
           cost_gbp: number
           deadline: string
+          order_reference?: string | null
+          deadline_charge?: number
+          urgency_level?: UrgencyLevel
         }
         Update: {
           worker_id?: string | null
@@ -74,6 +85,9 @@ export type Database = {
           adjusted_word_count?: number | null
           cost_gbp?: number
           deadline?: string
+          order_reference?: string | null
+          deadline_charge?: number
+          urgency_level?: UrgencyLevel
         }
       }
       project_files: {
@@ -146,6 +160,58 @@ export type Database = {
           subscription?: object
         }
       }
+      deadline_extension_requests: {
+        Row: {
+          id: number
+          project_id: number
+          worker_id: string
+          requested_deadline: string
+          reason: string
+          status: ExtensionStatus
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          project_id: number
+          worker_id: string
+          requested_deadline: string
+          reason: string
+          status?: ExtensionStatus
+        }
+        Update: {
+          requested_deadline?: string
+          reason?: string
+          status?: ExtensionStatus
+        }
+      }
+      notification_history: {
+        Row: {
+          id: number
+          user_id: string
+          project_id: number | null
+          title: string
+          body: string
+          delivery_status: DeliveryStatus
+          retry_count: number
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+        }
+        Insert: {
+          user_id: string
+          project_id?: number | null
+          title: string
+          body: string
+          delivery_status?: DeliveryStatus
+          retry_count?: number
+        }
+        Update: {
+          delivery_status?: DeliveryStatus
+          retry_count?: number
+          delivered_at?: string | null
+          error_message?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -157,6 +223,9 @@ export type Database = {
       user_role: UserRole
       project_status: ProjectStatus
       file_purpose: FilePurpose
+      urgency_level: UrgencyLevel
+      delivery_status: DeliveryStatus
+      extension_status: ExtensionStatus
     }
     CompositeTypes: {
       [_ in never]: never
@@ -168,11 +237,36 @@ export type Project = Database['public']['Tables']['projects']['Row'];
 export type Profile = Database['public']['Tables']['users']['Row'];
 export type ProjectFile = Database['public']['Tables']['project_files']['Row'];
 export type ChangeRequest = Database['public']['Tables']['project_change_requests']['Row'];
+export type DeadlineExtensionRequest = Database['public']['Tables']['deadline_extension_requests']['Row'];
+export type NotificationHistory = Database['public']['Tables']['notification_history']['Row'];
 
 export type ProjectWithDetails = Project & {
     project_files: ProjectFile[];
     project_change_requests: ChangeRequest[];
+    deadline_extension_requests?: DeadlineExtensionRequest[];
 };
+
+// Enhanced project interfaces for the new features
+export interface PricingBreakdown {
+  basePrice: number;
+  deadlineCharge: number;
+  totalPrice: number;
+  urgencyLevel: UrgencyLevel;
+}
+
+export interface DeadlineExtensionRequestData {
+  projectId: number;
+  workerId: string;
+  requestedDeadline: string;
+  reason: string;
+}
+
+export interface NotificationData {
+  userId: string;
+  projectId?: number;
+  title: string;
+  body: string;
+}
 
 
 export interface NewProjectFormData {

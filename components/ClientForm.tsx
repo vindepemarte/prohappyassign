@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { createNewProject, calculatePrice } from '../services/assignmentService';
-import { NewProjectFormData } from '../types';
+import { createNewProject, calculateEnhancedPrice } from '../services/assignmentService';
+import { NewProjectFormData, PricingBreakdown as PricingBreakdownType } from '../types';
 import Button from './Button';
 import Input from './Input';
 import FileInput from './common/FileInput';
+import PricingBreakdown from './common/PricingBreakdown';
 import { COLORS } from '../constants';
 
 const NewProjectForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubmit }) => {
@@ -16,14 +17,19 @@ const NewProjectForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubmit }
         guidance: '',
         files: [],
     });
-    const [price, setPrice] = useState(0);
+    const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdownType | null>(null);
     const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const calculatedPrice = calculatePrice(formData.wordCount);
-        setPrice(calculatedPrice);
-    }, [formData.wordCount]);
+        if (formData.wordCount > 0 && formData.deadline) {
+            const deadlineDate = new Date(formData.deadline);
+            const breakdown = calculateEnhancedPrice(formData.wordCount, deadlineDate);
+            setPricingBreakdown(breakdown);
+        } else {
+            setPricingBreakdown(null);
+        }
+    }, [formData.wordCount, formData.deadline]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -75,15 +81,27 @@ const NewProjectForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubmit }
             
             <Input name="title" placeholder="e.g., Marketing Strategy Analysis" label="📚 Module Name*" onChange={handleInputChange} required />
             <Input name="wordCount" type="number" placeholder="0" label="📊 Word Count*" onChange={handleInputChange} required />
+            <div>
+                <Input 
+                    name="deadline" 
+                    type="date" 
+                    label="📅 Project Deadline*" 
+                    onChange={handleInputChange} 
+                    required 
+                    min={new Date().toISOString().split('T')[0]}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                    💡 Tip: Shorter deadlines may include urgency charges. Select your deadline to see the pricing breakdown.
+                </p>
+            </div>
             
-            {price > 0 && (
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <span className="font-semibold text-gray-700">Estimated Price: </span>
-                    <span className="font-bold text-xl text-blue-600">£{price.toFixed(2)}</span>
-                </div>
+            {pricingBreakdown && (
+                <PricingBreakdown 
+                    breakdown={pricingBreakdown} 
+                    showDetails={true}
+                    className="mt-4"
+                />
             )}
-
-            <Input name="deadline" type="date" label="📅 Project Deadline*" onChange={handleInputChange} required />
 
             <textarea
                 name="guidance"
