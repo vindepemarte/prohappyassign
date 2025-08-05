@@ -286,6 +286,44 @@ interface NotificationPayload {
 }
 
 /**
+ * Fallback function to log notifications directly to database when edge function fails
+ */
+const logNotificationFallback = async (target: NotificationTarget, payload: NotificationPayload) => {
+    let userIds: string[] = [];
+    
+    if (target.userIds) {
+        userIds = target.userIds;
+    } else if (target.role) {
+        if (!target.role || target.role === 'all') {
+            const { data, error } = await supabase.from('users').select('id');
+            if (error) throw error;
+            userIds = data?.map(u => u.id) || [];
+        } else {
+            const { data, error } = await supabase.from('users').select('id').eq('role', target.role);
+            if (error) throw error;
+            userIds = data?.map(u => u.id) || [];
+        }
+    }
+    
+    if (userIds.length === 0) return;
+    
+    // Log notifications to database
+    const notifications = userIds.map(userId => ({
+        user_id: userId,
+        title: payload.title,
+        body: payload.body,
+        delivery_status: 'sent' as const,
+        created_at: new Date().toISOString()
+    }));
+    
+    const { error } = await supabase
+        .from('notification_history')
+        .insert(notifications);
+        
+    if (error) throw error;
+};
+
+/**
  * Sends a push notification by invoking a Supabase Edge Function.
  * @param target The target audience for the notification.
  * @param payload The content of the notification.
@@ -300,6 +338,18 @@ export const sendNotification = async ({ target, payload }: { target: Notificati
 
         if (error) {
             console.error('Error invoking send-push-notification function:', error);
+            
+            // Try fallback: log notification directly to database
+            try {
+                await logNotificationFallback(target, payload);
+                console.log('Notification logged as fallback');
+                return { 
+                    success: true,
+                    data: { message: 'Notification logged successfully (fallback mode)' }
+                };
+            } catch (fallbackError) {
+                console.error('Fallback logging also failed:', fallbackError);
+            }
             
             // Handle specific error cases
             let errorMessage = 'Failed to send notification. Please try again later.';

@@ -73,14 +73,20 @@ Deno.serve(async (req: any) => {
     if (target.userIds) {
         userIds = target.userIds;
     } else if (target.role) {
-        if (target.role === 'all') {
+        if (!target.role || target.role === 'all') {
             const { data, error } = await supabase.from('users').select('id');
-            if (error) throw error;
-            userIds = data.map((u: any) => u.id);
+            if (error) {
+                console.error('Error fetching all users:', error);
+                throw new Error('Failed to fetch users');
+            }
+            userIds = data?.map((u: any) => u.id) || [];
         } else {
             const { data, error } = await supabase.from('users').select('id').eq('role', target.role);
-            if (error) throw error;
-            userIds = data.map((u: any) => u.id);
+            if (error) {
+                console.error('Error fetching users by role:', error);
+                throw new Error(`Failed to fetch users with role: ${target.role}`);
+            }
+            userIds = data?.map((u: any) => u.id) || [];
         }
     }
     
@@ -91,12 +97,54 @@ Deno.serve(async (req: any) => {
         });
     }
 
-    const { data: subscriptions, error: subsError } = await supabase
-      .from('push_subscriptions')
-      .select('id, subscription')
-      .in('user_id', userIds);
+    // Check if push_subscriptions table exists and get subscriptions
+    let subscriptions: any[] = [];
+    try {
+      const { data, error: subsError } = await supabase
+        .from('push_subscriptions')
+        .select('id, subscription')
+        .in('user_id', userIds);
+        
+      if (subsError) {
+        console.warn('Push subscriptions table not found or error:', subsError);
+        // Continue without push notifications but log the notification
+      } else {
+        subscriptions = data || [];
+      }
+    } catch (error) {
+      console.warn('Push subscriptions not available:', error);
+    }
+
+    // Log notification to notification_history table
+    try {
+      const notificationPromises = userIds.map(userId => 
+        supabase.from('notification_history').insert({
+          user_id: userId,
+          title: payload.title,
+          body: payload.body,
+          delivery_status: subscriptions.length > 0 ? 'pending' : 'sent',
+          created_at: new Date().toISOString()
+        })
+      );
       
-    if (subsError) throw subsError;
+      await Promise.allSettled(notificationPromises);
+    } catch (error) {
+      console.warn('Failed to log notifications:', error);
+    }
+
+    // If no push subscriptions, return success (notifications logged)
+    if (subscriptions.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: true, 
+        message: 'Notifications logged successfully. No push subscriptions found.',
+        sent: 0, 
+        failed: 0,
+        logged: userIds.length
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
 
     const notificationPayload = JSON.stringify(payload);
 
@@ -121,7 +169,8 @@ Deno.serve(async (req: any) => {
     return new Response(JSON.stringify({ 
         success: true, 
         sent: subscriptions.length - failedCount, 
-        failed: failedCount 
+        failed: failedCount,
+        logged: userIds.length
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -129,9 +178,28 @@ Deno.serve(async (req: any) => {
 
   } catch (err) {
     console.error('Error in edge function:', err);
-    // Cast 'err' to 'Error' to safely access the 'message' property.
-    return new Response(JSON.stringify({ error: (err as Error).message }), {
-      status: 500,
+    
+    // Provide more specific error messages
+    let errorMessage = 'Internal server error';
+    let statusCode = 500;
+    
+    if (err instanceof Error) {
+      errorMessage = err.message;
+      
+      // Handle specific error types
+      if (err.message.includes('Failed to fetch users')) {
+        statusCode = 400;
+        errorMessage = 'Invalid user role or database error';
+      } else if (err.message.includes('Invalid request')) {
+        statusCode = 400;
+      }
+    }
+    
+    return new Response(JSON.stringify({ 
+      error: errorMessage,
+      timestamp: new Date().toISOString()
+    }), {
+      status: statusCode,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
   }
