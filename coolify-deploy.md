@@ -101,6 +101,12 @@ This script will:
 
 ## Troubleshooting
 
+### TypeScript Errors in Edge Functions
+- TypeScript errors in `supabase/functions/` are expected in local development
+- These files run in Deno runtime, not Node.js
+- The `@ts-ignore` comments suppress these harmless errors
+- Edge functions will work correctly when deployed to Supabase
+
 ### Service Worker Issues
 - Make sure your domain supports HTTPS (required for service workers)
 - Check that the service worker is being served correctly
