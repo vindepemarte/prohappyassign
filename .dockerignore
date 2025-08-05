@@ -1,10 +1,54 @@
+# Dependencies
 node_modules
-npm-debug.log
+npm-debug.log*
+
+# Build outputs
+dist
+.vite
+
+# Development files
+.env.local
+.env.development
+.env.test
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
 .git
 .gitignore
+
+# Documentation
 README.md
-.env
-.nyc_output
-coverage
-.vscode
-.DS_Store
+docs/
+
+# Test files
+tests/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary folders
+tmp/
+temp/

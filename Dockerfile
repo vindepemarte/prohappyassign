@@ -1,9 +1,10 @@
 # Multi-stage build for Coolify
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+# Install ALL dependencies (including dev deps) for build
+RUN npm ci
 
 COPY . .
 RUN npm run build
