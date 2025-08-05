@@ -419,8 +419,8 @@ const AgentDashboard: React.FC = () => {
                     <button
                         onClick={() => setViewMode('docs')}
                         className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'docs'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -431,8 +431,8 @@ const AgentDashboard: React.FC = () => {
                     <button
                         onClick={() => setViewMode('charts')}
                         className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'charts'
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
