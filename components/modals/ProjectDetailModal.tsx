@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { getProjectDetails, getFileUrl, submitFinalWork, requestWordCountChange, cancelProject, requestDeadlineExtension } from '../../services/assignmentService';
+import { getProjectDetails, getFileUrl, submitFinalWork, requestWordCountChange, cancelProject, requestDeadlineExtension, requestDeadlineChange } from '../../services/assignmentService';
 import { ProjectWithDetails } from '../../types';
 import Button from '../Button';
 import Input from '../Input';
@@ -16,7 +16,7 @@ interface ModalProps {
     projectId: number;
 }
 
-type ModalTab = 'overview' | 'changes' | 'submit' | 'adjust' | 'cancel' | 'deadline';
+type ModalTab = 'overview' | 'changes' | 'submit' | 'adjust' | 'cancel' | 'deadline' | 'adjustDeadline';
 
 const LoadingSpinner: React.FC = () => (
     <div className="flex justify-center items-center h-full">
@@ -45,6 +45,9 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
     const [requestedDeadline, setRequestedDeadline] = useState('');
     const [extensionReason, setExtensionReason] = useState('');
     const [deadlineExtensions, setDeadlineExtensions] = useState<any[]>([]);
+    
+    // Deadline adjustment states
+    const [newDeadline, setNewDeadline] = useState('');
 
     useEffect(() => {
         if (isOpen && projectId) {
@@ -73,6 +76,11 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
             
             // Set deadline extensions from project data
             setDeadlineExtensions(data.deadline_extension_requests || []);
+            
+            // Set new deadline to tomorrow as minimum
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            setNewDeadline(tomorrow.toISOString().split('T')[0]);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to load project details.');
         } finally {
@@ -91,6 +99,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         setRequestedDeadline(tomorrow.toISOString().split('T')[0]);
+        setNewDeadline(tomorrow.toISOString().split('T')[0]);
     };
     
     const handleFinalSubmit = async (e: React.FormEvent) => {
@@ -160,6 +169,24 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
         } catch (e) {
             setFormStatus('error');
             setFormError(e instanceof Error ? e.message : 'Failed to submit deadline extension request.');
+        }
+    };
+
+    const handleDeadlineAdjustSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user || !project || !newDeadline) return;
+        
+        setFormStatus('submitting');
+        setFormError('');
+        
+        try {
+            const deadlineDate = new Date(newDeadline);
+            await requestDeadlineChange(project.id, deadlineDate);
+            setFormStatus('success');
+            setTimeout(onClose, 2000);
+        } catch (e) {
+            setFormStatus('error');
+            setFormError(e instanceof Error ? e.message : 'Failed to submit deadline adjustment.');
         }
     };
 
@@ -476,6 +503,70 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                         </form>
                     </div>
                 )
+            case 'adjustDeadline':
+                const minDeadlineDate = new Date();
+                minDeadlineDate.setDate(minDeadlineDate.getDate() + 1);
+                
+                return (
+                    <form onSubmit={handleDeadlineAdjustSubmit} className="space-y-6">
+                        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                            <h4 className="font-bold text-xl text-blue-800 mb-3 flex items-center">
+                                <span className="text-2xl mr-3">📅</span>
+                                Adjust Deadline
+                            </h4>
+                            <p className="text-blue-700 leading-relaxed">
+                                If you need to change the project deadline, you can request an adjustment here. This will send a new quote to the client for approval with updated pricing.
+                            </p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Current Deadline: <strong>{new Date(project.deadline).toLocaleDateString()}</strong>
+                                </label>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    New Deadline *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={newDeadline}
+                                    onChange={(e) => setNewDeadline(e.target.value)}
+                                    min={minDeadlineDate.toISOString().split('T')[0]}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    required
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    The new deadline will affect the project pricing based on urgency.
+                                </p>
+                            </div>
+                            
+                            {formError && (
+                                <div className="error-message bg-red-50 border border-red-200 rounded-xl p-4">
+                                    <p className="text-red-600 font-medium">{formError}</p>
+                                </div>
+                            )}
+                            
+                            <Button 
+                                type="submit" 
+                                variant="secondary" 
+                                disabled={formStatus === 'submitting' || !newDeadline}
+                                className="btn-enhanced"
+                            >
+                                {formStatus === 'submitting' ? (
+                                    <div className="flex items-center justify-center space-x-2">
+                                        <div className="loading-spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                        <span>Submitting...</span>
+                                    </div>
+                                ) : (
+                                    'Request Deadline Adjustment'
+                                )}
+                            </Button>
+                        </div>
+                    </form>
+                )
         }
     };
     
@@ -534,6 +625,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                             <TabButton tabId="changes">Change Requests</TabButton>
                             <TabButton tabId="submit">Submit Work</TabButton>
                             <TabButton tabId="adjust">Adjust Scope</TabButton>
+                            <TabButton tabId="adjustDeadline">Adjust Deadline</TabButton>
                             {/* Show deadline extension tab only for workers and active projects */}
                             {user?.role === 'worker' && project.worker_id === user.id && 
                              !['completed', 'cancelled', 'refund'].includes(project.status) && (

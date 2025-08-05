@@ -320,8 +320,11 @@ export const getAllProjectsForAgent = async (): Promise<Project[]> => {
  * Updates the status of a specific project (for agents).
  * @param projectId The ID of the project to update.
  * @param status The new status for the project.
+ * @param bypassValidation Optional parameter to bypass status validation (for agents only).
  */
-export const updateProjectStatus = async (projectId: number, status: ProjectStatus): Promise<void> => {
+export const updateProjectStatus = async (projectId: number, status: ProjectStatus, bypassValidation: boolean = false): Promise<void> => {
+    console.log(`Updating project ${projectId} status to ${status}`);
+    
     // Get current project status for validation
     const { data: currentProject, error: fetchError } = await supabase
         .from('projects')
@@ -331,12 +334,20 @@ export const updateProjectStatus = async (projectId: number, status: ProjectStat
 
     if (fetchError) {
         console.error(`Error fetching project ${projectId} for status validation:`, fetchError);
-        throw new Error('Failed to validate status transition.');
+        throw new Error(`Failed to validate status transition: ${fetchError.message}`);
     }
 
-    // Validate status transition
-    if (!isValidStatusTransition(currentProject.status, status)) {
-        throw new Error(`Invalid status transition from '${currentProject.status}' to '${status}'.`);
+    if (!currentProject) {
+        throw new Error(`Project ${projectId} not found.`);
+    }
+
+    console.log(`Current status: ${currentProject.status}, New status: ${status}, Bypass validation: ${bypassValidation}`);
+
+    // Validate status transition (unless bypassed)
+    if (!bypassValidation && !isValidStatusTransition(currentProject.status, status)) {
+        const errorMsg = `Invalid status transition from '${currentProject.status}' to '${status}'.`;
+        console.error(errorMsg);
+        throw new Error(errorMsg);
     }
 
     const { error } = await supabase
@@ -346,8 +357,10 @@ export const updateProjectStatus = async (projectId: number, status: ProjectStat
 
     if (error) {
         console.error(`Error updating project ${projectId} status:`, error);
-        throw new Error('Failed to update project status.');
+        throw new Error(`Failed to update project status: ${error.message}`);
     }
+
+    console.log(`Successfully updated project ${projectId} status to ${status}`);
 
     // Invalidate project caches
     projectCache.clear();
@@ -658,6 +671,69 @@ export const requestWordCountChange = async (projectId: number, newWordCount: nu
 };
 
 /**
+ * Allows a worker to request a deadline change, which triggers a re-quote.
+ * @param projectId The ID of the project.
+ * @param newDeadline The new proposed deadline.
+ */
+export const requestDeadlineChange = async (projectId: number, newDeadline: Date): Promise<void> => {
+    if (newDeadline <= new Date()) {
+        throw new Error('Deadline must be in the future.');
+    }
+    
+    // 1. Get current project to maintain word count
+    const { data: projectData, error: fetchError } = await supabase
+        .from('projects')
+        .select('initial_word_count, adjusted_word_count')
+        .eq('id', projectId)
+        .single();
+    
+    if (fetchError || !projectData) {
+        throw new Error('Could not fetch project details.');
+    }
+    
+    // 2. Calculate new price with new deadline charges
+    const currentWordCount = projectData.adjusted_word_count || projectData.initial_word_count;
+    const pricingBreakdown = calculateEnhancedPrice(currentWordCount, newDeadline);
+
+    // 3. Update project with new deadline, price, and status
+    const { error } = await supabase
+        .from('projects')
+        .update({
+            deadline: newDeadline.toISOString(),
+            cost_gbp: pricingBreakdown.totalPrice,
+            deadline_charge: pricingBreakdown.deadlineCharge,
+            urgency_level: pricingBreakdown.urgencyLevel,
+            status: 'pending_quote_approval',
+        })
+        .eq('id', projectId);
+    
+    if (error) {
+        throw new Error(`Failed to request deadline change: ${error.message}`);
+    }
+
+    // 4. Notify agents and client
+    fireAndForgetNotification(sendNotification({
+        target: { role: 'agent' },
+        payload: {
+            title: 'Deadline Change Request',
+            body: `A worker has requested a deadline change for project #${projectId}.`
+        }
+    }));
+
+    // Notify client about deadline change request
+    const { clientId } = await getProjectParticipantIds(projectId);
+    if (clientId) {
+        fireAndForgetNotification(sendNotification({
+            target: { userIds: [clientId] },
+            payload: {
+                title: 'Deadline Change Requested',
+                body: `The worker has requested a deadline change for your project #${projectId}. You will be notified of the new pricing.`
+            }
+        }));
+    }
+};
+
+/**
  * Approves a new quote proposed by a worker.
  * @param projectId The ID of the project.
  */
@@ -728,6 +804,55 @@ export const rejectQuoteChange = async (projectId: number, originalWordCount: nu
             payload: {
                 title: 'Quote Change Rejected',
                 body: `Your new quote for project #${projectId} was rejected. The project has reverted to its original scope.`
+            }
+        }));
+    }
+};
+
+/**
+ * Rejects a deadline change, reverting to the original deadline.
+ * @param projectId The ID of the project.
+ * @param originalDeadline The original deadline to revert to.
+ */
+export const rejectDeadlineChange = async (projectId: number, originalDeadline: Date): Promise<void> => {
+    // 1. Get current project to maintain word count
+    const { data: projectData, error: fetchError } = await supabase
+        .from('projects')
+        .select('initial_word_count, adjusted_word_count')
+        .eq('id', projectId)
+        .single();
+    
+    if (fetchError || !projectData) {
+        throw new Error('Could not fetch project details.');
+    }
+    
+    // 2. Calculate original cost with original deadline charges
+    const currentWordCount = projectData.adjusted_word_count || projectData.initial_word_count;
+    const originalPricingBreakdown = calculateEnhancedPrice(currentWordCount, originalDeadline);
+
+    const { error } = await supabase
+        .from('projects')
+        .update({
+            status: 'in_progress',
+            deadline: originalDeadline.toISOString(),
+            cost_gbp: originalPricingBreakdown.totalPrice,
+            deadline_charge: originalPricingBreakdown.deadlineCharge,
+            urgency_level: originalPricingBreakdown.urgencyLevel,
+        })
+        .eq('id', projectId);
+    
+    if (error) {
+        throw new Error(`Failed to reject deadline change: ${error.message}`);
+    }
+
+    // Notify the worker
+    const { workerId } = await getProjectParticipantIds(projectId);
+    if (workerId) {
+        fireAndForgetNotification(sendNotification({
+            target: { userIds: [workerId] },
+            payload: {
+                title: 'Deadline Change Rejected',
+                body: `Your deadline change request for project #${projectId} was rejected. The project has reverted to its original deadline.`
             }
         }));
     }

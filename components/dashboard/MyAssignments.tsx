@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { getProjectsForUser, approveQuoteChange, rejectQuoteChange, calculatePrice } from '../../services/assignmentService';
+import { getProjectsForUser, approveQuoteChange, rejectQuoteChange, rejectDeadlineChange, calculatePrice } from '../../services/assignmentService';
 import { Project, ProjectStatus } from '../../types';
 import Button from '../Button';
 import RequestChangesModal from '../modals/RequestChangesModal';
@@ -99,6 +99,15 @@ const MyProjects: React.FC = () => {
             fetchProjects();
         } catch (e) {
             alert(e instanceof Error ? e.message : 'Failed to reject quote');
+        }
+    };
+
+    const handleRejectDeadlineChange = async (project: Project, originalDeadline: Date) => {
+        try {
+            await rejectDeadlineChange(project.id, originalDeadline);
+            fetchProjects();
+        } catch (e) {
+            alert(e instanceof Error ? e.message : 'Failed to reject deadline change');
         }
     };
 

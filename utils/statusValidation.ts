@@ -5,13 +5,13 @@ import { ProjectStatus, UserRole } from '../types';
  */
 const STATUS_TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
   pending_payment_approval: ['rejected_payment', 'awaiting_worker_assignment'],
-  rejected_payment: ['pending_payment_approval'],
-  awaiting_worker_assignment: ['in_progress'],
-  in_progress: ['needs_changes', 'pending_final_approval', 'refund'],
-  pending_quote_approval: ['in_progress', 'rejected_payment'],
-  needs_changes: ['in_progress', 'refund'],
-  pending_final_approval: ['completed', 'needs_changes', 'refund'],
-  completed: [], // Terminal state - no transitions allowed
+  rejected_payment: ['pending_payment_approval', 'awaiting_worker_assignment'], // Allow agents to approve after rejection
+  awaiting_worker_assignment: ['in_progress', 'rejected_payment'], // Allow rejection at any stage
+  in_progress: ['needs_changes', 'pending_final_approval', 'refund', 'awaiting_worker_assignment'], // Allow reassignment
+  pending_quote_approval: ['in_progress', 'rejected_payment', 'awaiting_worker_assignment'],
+  needs_changes: ['in_progress', 'refund', 'awaiting_worker_assignment'],
+  pending_final_approval: ['completed', 'needs_changes', 'refund', 'in_progress'],
+  completed: ['needs_changes'], // Allow reopening if needed
   refund: ['cancelled'], // Can only transition to cancelled after refund processing
   cancelled: [], // Terminal state - no transitions allowed
 };
@@ -23,12 +23,15 @@ const ROLE_STATUS_PERMISSIONS: Record<UserRole, ProjectStatus[]> = {
   client: ['pending_payment_approval', 'rejected_payment'],
   worker: ['pending_final_approval', 'pending_quote_approval', 'refund'],
   agent: [
+    'pending_payment_approval',
     'awaiting_worker_assignment',
     'in_progress',
     'needs_changes',
     'completed',
     'cancelled',
-    'rejected_payment'
+    'rejected_payment',
+    'pending_quote_approval',
+    'pending_final_approval'
   ],
 };
 

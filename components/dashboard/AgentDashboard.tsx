@@ -237,6 +237,15 @@ const AgentDashboard: React.FC = () => {
 
     const handleStatusChange = async (projectId: number, newStatus: ProjectStatus) => {
         const originalProjects = [...projects];
+        const currentProject = projects.find(p => p.id === projectId);
+        
+        if (!currentProject) {
+            loadingActions.setError(`Project ${projectId} not found.`);
+            return;
+        }
+
+        console.log(`Attempting to change project ${projectId} status from ${currentProject.status} to ${newStatus}`);
+        
         const updatedProjects = projects.map(p => p.id === projectId ? { ...p, status: newStatus } : p);
         setProjects(updatedProjects);
 
@@ -245,8 +254,29 @@ const AgentDashboard: React.FC = () => {
 
         try {
             await updateProjectStatus(projectId, newStatus);
+            console.log(`Successfully updated project ${projectId} status to ${newStatus}`);
         } catch (updateError) {
-            loadingActions.setError(`Failed to update project ${projectId}.`);
+            console.error(`Failed to update project ${projectId} status:`, updateError);
+            const errorMessage = updateError instanceof Error ? updateError.message : 'Unknown error occurred';
+            
+            // If it's a validation error, offer to bypass validation
+            if (errorMessage.includes('Invalid status transition')) {
+                const shouldBypass = confirm(`Status transition validation failed: ${errorMessage}\n\nAs an agent, you can bypass this validation. Do you want to force this status change?`);
+                if (shouldBypass) {
+                    try {
+                        await updateProjectStatus(projectId, newStatus, true); // Bypass validation
+                        console.log(`Successfully updated project ${projectId} status to ${newStatus} (bypassed validation)`);
+                        return; // Success, don't revert changes
+                    } catch (bypassError) {
+                        console.error(`Failed to update project ${projectId} status even with bypass:`, bypassError);
+                        loadingActions.setError(`Failed to update project ${projectId} even with bypass: ${bypassError instanceof Error ? bypassError.message : 'Unknown error'}`);
+                    }
+                }
+            } else {
+                loadingActions.setError(`Failed to update project ${projectId}: ${errorMessage}`);
+            }
+            
+            // Revert changes on failure
             setProjects(originalProjects);
             updateFilteredData(originalProjects, currentFilter);
         }

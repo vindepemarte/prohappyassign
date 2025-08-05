@@ -17,6 +17,27 @@ const ClientDashboard: React.FC = () => {
 
     return (
         <DashboardLayout title="Client Dashboard">
+            {/* Payment Reference Notice */}
+            <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                <div className="flex items-start space-x-3">
+                    <div className="text-2xl">💳</div>
+                    <div>
+                        <h3 className="text-lg font-bold text-blue-800 mb-2">Payment Reference Information</h3>
+                        <p className="text-blue-700 leading-relaxed">
+                            <strong>Before we can process your order, make at least Half Payment using the following reference format:</strong>
+                        </p>
+                        <div className="mt-3 p-3 bg-blue-100 rounded-lg border border-blue-300">
+                            <p className="text-blue-800 font-semibold">
+                                Reference Format: <span className="font-mono bg-white px-2 py-1 rounded">[Month] + [Order Number]</span>
+                            </p>
+                            <p className="text-blue-700 text-sm mt-2">
+                                <strong>Example:</strong> For August order #000003, use reference: <span className="font-mono bg-white px-1 rounded">08-3</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Left Column - Navigation and Forms */}
                 <div className="lg:col-span-1 space-y-8">
