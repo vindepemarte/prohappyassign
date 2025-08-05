@@ -132,16 +132,24 @@ const MyProjects: React.FC = () => {
                 <div className="flex flex-col sm:flex-row justify-between items-center border-b pb-4 mb-4">
                     <h2 className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">My Projects &amp; Order History</h2>
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                        <Select value={filter} onChange={e => setFilter(e.target.value as StatusFilter)}>
-                            <option value="all">All Statuses</option>
-                            <option value="in_progress">In Progress</option>
-                            <option value="completed">Completed</option>
-                            <option value="needs_changes">Needs Changes</option>
-                        </Select>
-                         <Select value={sort} onChange={e => setSort(e.target.value as SortType)}>
-                            <option value="newest">Newest First</option>
-                            <option value="oldest">Oldest First</option>
-                        </Select>
+                        <Select 
+                            value={filter} 
+                            onChange={(value) => setFilter(value as StatusFilter)}
+                            options={[
+                                { value: 'all', label: 'All Statuses' },
+                                { value: 'in_progress', label: 'In Progress' },
+                                { value: 'completed', label: 'Completed' },
+                                { value: 'needs_changes', label: 'Needs Changes' }
+                            ]}
+                        />
+                        <Select 
+                            value={sort} 
+                            onChange={(value) => setSort(value as SortType)}
+                            options={[
+                                { value: 'newest', label: 'Newest First' },
+                                { value: 'oldest', label: 'Oldest First' }
+                            ]}
+                        />
                     </div>
                 </div>
 

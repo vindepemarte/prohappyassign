@@ -44,30 +44,30 @@ const WorkerDashboard: React.FC = () => {
         timeout: 15000, // 15 seconds for project loading
         maxRetries: 2
     });
-    
+
     // Filter state management
     const { currentFilter, setFilter } = useFilterState({
         defaultFilter: { type: 'month' },
         persistToUrl: true,
         urlParamPrefix: 'worker_filter'
     });
-    
+
     useEffect(() => {
         fetchWorkerProjects();
     }, [user]);
 
     const fetchWorkerProjects = async () => {
         if (!user) return;
-        
+
         try {
             loadingActions.startLoading();
-            
+
             const data = await performanceMonitor.measure(
                 'worker-projects-fetch',
                 () => getProjectsForWorker(user.id),
                 { userId: user.id }
             );
-            
+
             setProjects(data);
             loadingActions.stopLoading();
         } catch (err) {
@@ -152,9 +152,9 @@ const WorkerDashboard: React.FC = () => {
                         showEarnings={true}
                         className="mb-4"
                     />
-                    
+
                     {/* Earnings Summary Card */}
-                    {!loading && !error && projects.length > 0 && (
+                    {!loadingState.isLoading && !loadingState.error && projects.length > 0 && (
                         <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                 <div>
@@ -162,7 +162,7 @@ const WorkerDashboard: React.FC = () => {
                                         {earningsLoading ? 'Calculating...' : 'Your Earnings'}
                                     </h3>
                                     <p className="text-sm text-gray-600">
-                                        Based on {earnings.projectCount} completed project{earnings.projectCount !== 1 ? 's' : ''} 
+                                        Based on {earnings.projectCount} completed project{earnings.projectCount !== 1 ? 's' : ''}
                                         {currentFilter.type === 'week' && ' this week'}
                                         {currentFilter.type === 'month' && ' this month'}
                                         {currentFilter.type === 'custom' && ' in selected period'}
@@ -216,62 +216,61 @@ const WorkerDashboard: React.FC = () => {
                                 </p>
                             </div>
                         )}
-                        
+
                         {filteredProjects.map(project => {
-                           const currentWordCount = project.adjusted_word_count || project.initial_word_count;
-                           const isCompleted = project.status === 'completed';
-                           return (
-                            <div key={project.id} className="border p-4 rounded-xl bg-slate-50 hover:shadow-md transition-shadow">
-                               <div className="flex flex-col sm:flex-row justify-between sm:items-center">
-                                   <div>
-                                       <p className="font-bold text-lg text-[#4A90E2]">{project.title}</p>
-                                       <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                                           <p className="text-sm text-gray-500">
-                                               Assigned on: {new Date(project.updated_at).toLocaleDateString()}
-                                           </p>
-                                           {project.order_reference && (
-                                               <p className="text-sm text-gray-600">
-                                                   <span className="font-mono font-semibold text-blue-600">{project.order_reference}</span>
-                                               </p>
-                                           )}
-                                       </div>
-                                   </div>
-                                   <div className="mt-2 sm:mt-0 text-left sm:text-right">
-                                       <StatusBadge status={project.status} />
-                                   </div>
-                               </div>
-                               <div className="mt-4 border-t pt-3 text-sm text-gray-600 grid grid-cols-2 gap-2">
-                                   <p><strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}</p>
-                                   <p><strong>Word Count:</strong> {currentWordCount.toLocaleString()}</p>
-                               </div>
-                                <div className={`mt-3 border rounded-lg p-3 text-center ${
-                                    isCompleted 
-                                        ? 'bg-green-50 border-green-200' 
+                            const currentWordCount = project.adjusted_word_count || project.initial_word_count;
+                            const isCompleted = project.status === 'completed';
+                            return (
+                                <div key={project.id} className="border p-4 rounded-xl bg-slate-50 hover:shadow-md transition-shadow">
+                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center">
+                                        <div>
+                                            <p className="font-bold text-lg text-[#4A90E2]">{project.title}</p>
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                                                <p className="text-sm text-gray-500">
+                                                    Assigned on: {new Date(project.updated_at).toLocaleDateString()}
+                                                </p>
+                                                {project.order_reference && (
+                                                    <p className="text-sm text-gray-600">
+                                                        <span className="font-mono font-semibold text-blue-600">{project.order_reference}</span>
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="mt-2 sm:mt-0 text-left sm:text-right">
+                                            <StatusBadge status={project.status} />
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 border-t pt-3 text-sm text-gray-600 grid grid-cols-2 gap-2">
+                                        <p><strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}</p>
+                                        <p><strong>Word Count:</strong> {currentWordCount.toLocaleString()}</p>
+                                    </div>
+                                    <div className={`mt-3 border rounded-lg p-3 text-center ${isCompleted
+                                        ? 'bg-green-50 border-green-200'
                                         : 'bg-gray-50 border-gray-200'
-                                }`}>
-                                   <p className={`font-semibold ${
-                                       isCompleted ? 'text-green-800' : 'text-gray-600'
-                                   }`}>
-                                       {isCompleted ? 'Earned: ' : 'Potential Payout: '}
-                                       ₹{calculateWorkerPayout(currentWordCount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                                   </p>
-                                   {!isCompleted && (
-                                       <p className="text-xs text-gray-500 mt-1">
-                                           Payment upon completion
-                                       </p>
-                                   )}
-                               </div>
-                               <div className="mt-4 flex justify-end">
-                                    <Button 
-                                        className="!w-auto py-2 px-4 text-sm"
-                                        onClick={() => handleOpenModal(project.id)}
-                                    >
-                                        View Details &amp; Actions
-                                    </Button>
-                               </div>
-                           </div>
-                        )})}
-                        
+                                        }`}>
+                                        <p className={`font-semibold ${isCompleted ? 'text-green-800' : 'text-gray-600'
+                                            }`}>
+                                            {isCompleted ? 'Earned: ' : 'Potential Payout: '}
+                                            ₹{calculateWorkerPayout(currentWordCount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                        </p>
+                                        {!isCompleted && (
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Payment upon completion
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="mt-4 flex justify-end">
+                                        <Button
+                                            className="!w-auto py-2 px-4 text-sm"
+                                            onClick={() => handleOpenModal(project.id)}
+                                        >
+                                            View Details &amp; Actions
+                                        </Button>
+                                    </div>
+                                </div>
+                            )
+                        })}
+
                         {/* No Filtered Projects */}
                         {projects.length > 0 && filteredProjects.length === 0 && (
                             <div className="text-center py-10">
@@ -286,9 +285,9 @@ const WorkerDashboard: React.FC = () => {
                     </div>
                 </LoadingWrapper>
             </DashboardLayout>
-            
+
             {isModalOpen && selectedProjectId && (
-                <ProjectDetailModal 
+                <ProjectDetailModal
                     isOpen={isModalOpen}
                     onClose={handleCloseModal}
                     projectId={selectedProjectId}
