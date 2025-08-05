@@ -1,23 +1,22 @@
-# Multi-stage build for Coolify
-FROM node:20-alpine AS builder
+# Simple Node.js Dockerfile for Coolify
+FROM node:20-alpine
 
 WORKDIR /app
+
+# Copy package files
 COPY package*.json ./
-# Install ALL dependencies (including dev deps) for build
+
+# Install dependencies
 RUN npm ci
 
+# Copy source code
 COPY . .
+
+# Build the application
 RUN npm run build
 
-# Production stage with nginx
-FROM nginx:alpine
+# Expose port (Coolify will map this)
+EXPOSE 3000
 
-# Copy built assets
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Start the application using serve
+CMD ["npm", "start"]
