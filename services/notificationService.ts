@@ -332,8 +332,14 @@ export const sendNotification = async ({ target, payload }: { target: Notificati
     try {
         console.log('Sending notification:', { target, payload });
         
+        // Get the current session for authorization
+        const { data: { session } } = await supabase.auth.getSession();
+        
         const { data, error } = await supabase.functions.invoke('send-push-notification', {
             body: { target, payload },
+            headers: session ? {
+                'Authorization': `Bearer ${session.access_token}`
+            } : {}
         });
 
         if (error) {

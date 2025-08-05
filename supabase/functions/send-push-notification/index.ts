@@ -1,12 +1,13 @@
-// The /// <reference ... /> directive was removed because the user's environment
-// could not resolve it, causing a compilation error.
-// The 'Deno' global, which is available in the Supabase Edge Function runtime,
-// is declared as 'any' to satisfy the TypeScript compiler in an environment
-// that is not configured for Deno. This is a workaround to prevent type errors
-// during development.
+// Supabase Edge Function - runs in Deno runtime
+// TypeScript errors in local development are expected and can be ignored
+// The function will work correctly when deployed to Supabase
+
+// @ts-ignore - Deno global is available in Supabase Edge Function runtime
 declare const Deno: any;
 
+// @ts-ignore - ESM imports work in Deno runtime
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+// @ts-ignore - ESM imports work in Deno runtime  
 import webpush from 'https://esm.sh/web-push@3.6.7';
 
 // IMPORTANT: These VAPID keys must be set as environment variables
@@ -43,10 +44,13 @@ Deno.serve(async (req: any) => {
   }
 
   try {
+    console.log('Edge function called with headers:', req.headers.get('Authorization') ? 'Auth header present' : 'No auth header');
+    
     // Check if VAPID keys are configured
     if (!vapidPublicKey || !vapidPrivateKey) {
-      return new Response(JSON.stringify({ 
-        error: 'Push notifications not configured. VAPID keys missing.' 
+      console.log('VAPID keys missing');
+      return new Response(JSON.stringify({
+        error: 'Push notifications not configured. VAPID keys missing.'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -62,39 +66,42 @@ Deno.serve(async (req: any) => {
       });
     }
 
+    const authHeader = req.headers.get('Authorization');
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      authHeader ? { 
+        global: { headers: { Authorization: authHeader } } 
+      } : {}
     );
-    
+
     let userIds: string[] = [];
 
     if (target.userIds) {
-        userIds = target.userIds;
+      userIds = target.userIds;
     } else if (target.role) {
-        if (!target.role || target.role === 'all') {
-            const { data, error } = await supabase.from('users').select('id');
-            if (error) {
-                console.error('Error fetching all users:', error);
-                throw new Error('Failed to fetch users');
-            }
-            userIds = data?.map((u: any) => u.id) || [];
-        } else {
-            const { data, error } = await supabase.from('users').select('id').eq('role', target.role);
-            if (error) {
-                console.error('Error fetching users by role:', error);
-                throw new Error(`Failed to fetch users with role: ${target.role}`);
-            }
-            userIds = data?.map((u: any) => u.id) || [];
+      if (!target.role || target.role === 'all') {
+        const { data, error } = await supabase.from('users').select('id');
+        if (error) {
+          console.error('Error fetching all users:', error);
+          throw new Error('Failed to fetch users');
         }
+        userIds = data?.map((u: any) => u.id) || [];
+      } else {
+        const { data, error } = await supabase.from('users').select('id').eq('role', target.role);
+        if (error) {
+          console.error('Error fetching users by role:', error);
+          throw new Error(`Failed to fetch users with role: ${target.role}`);
+        }
+        userIds = data?.map((u: any) => u.id) || [];
+      }
     }
-    
+
     if (userIds.length === 0) {
-        return new Response(JSON.stringify({ message: 'No target users found.' }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders },
-        });
+      return new Response(JSON.stringify({ message: 'No target users found.' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
     }
 
     // Check if push_subscriptions table exists and get subscriptions
@@ -104,7 +111,7 @@ Deno.serve(async (req: any) => {
         .from('push_subscriptions')
         .select('id, subscription')
         .in('user_id', userIds);
-        
+
       if (subsError) {
         console.warn('Push subscriptions table not found or error:', subsError);
         // Continue without push notifications but log the notification
@@ -117,7 +124,7 @@ Deno.serve(async (req: any) => {
 
     // Log notification to notification_history table
     try {
-      const notificationPromises = userIds.map(userId => 
+      const notificationPromises = userIds.map(userId =>
         supabase.from('notification_history').insert({
           user_id: userId,
           title: payload.title,
@@ -126,7 +133,7 @@ Deno.serve(async (req: any) => {
           created_at: new Date().toISOString()
         })
       );
-      
+
       await Promise.allSettled(notificationPromises);
     } catch (error) {
       console.warn('Failed to log notifications:', error);
@@ -134,10 +141,10 @@ Deno.serve(async (req: any) => {
 
     // If no push subscriptions, return success (notifications logged)
     if (subscriptions.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: true, 
+      return new Response(JSON.stringify({
+        success: true,
         message: 'Notifications logged successfully. No push subscriptions found.',
-        sent: 0, 
+        sent: 0,
         failed: 0,
         logged: userIds.length
       }), {
@@ -148,29 +155,29 @@ Deno.serve(async (req: any) => {
 
     const notificationPayload = JSON.stringify(payload);
 
-    const sendPromises = subscriptions.map((sub: any) => 
-        webpush.sendNotification(sub.subscription, notificationPayload)
-            .catch((err: any) => {
-                if (err.statusCode === 410 || err.statusCode === 404) {
-                    // Subscription is no longer valid, delete it
-                    console.log(`Subscription ${sub.id} is gone. Deleting.`);
-                    return supabase.from('push_subscriptions').delete().eq('id', sub.id);
-                } else {
-                    console.error('Failed to send notification:', err.statusCode, err.body);
-                    // Return the error to be logged by Promise.allSettled
-                    return Promise.reject(err);
-                }
-            })
+    const sendPromises = subscriptions.map((sub: any) =>
+      webpush.sendNotification(sub.subscription, notificationPayload)
+        .catch((err: any) => {
+          if (err.statusCode === 410 || err.statusCode === 404) {
+            // Subscription is no longer valid, delete it
+            console.log(`Subscription ${sub.id} is gone. Deleting.`);
+            return supabase.from('push_subscriptions').delete().eq('id', sub.id);
+          } else {
+            console.error('Failed to send notification:', err.statusCode, err.body);
+            // Return the error to be logged by Promise.allSettled
+            return Promise.reject(err);
+          }
+        })
     );
 
     const results = await Promise.allSettled(sendPromises);
     const failedCount = results.filter(r => r.status === 'rejected').length;
 
-    return new Response(JSON.stringify({ 
-        success: true, 
-        sent: subscriptions.length - failedCount, 
-        failed: failedCount,
-        logged: userIds.length
+    return new Response(JSON.stringify({
+      success: true,
+      sent: subscriptions.length - failedCount,
+      failed: failedCount,
+      logged: userIds.length
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -178,14 +185,14 @@ Deno.serve(async (req: any) => {
 
   } catch (err) {
     console.error('Error in edge function:', err);
-    
+
     // Provide more specific error messages
     let errorMessage = 'Internal server error';
     let statusCode = 500;
-    
+
     if (err instanceof Error) {
       errorMessage = err.message;
-      
+
       // Handle specific error types
       if (err.message.includes('Failed to fetch users')) {
         statusCode = 400;
@@ -194,8 +201,8 @@ Deno.serve(async (req: any) => {
         statusCode = 400;
       }
     }
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       error: errorMessage,
       timestamp: new Date().toISOString()
     }), {
