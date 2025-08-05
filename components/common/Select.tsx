@@ -194,7 +194,7 @@ const Select: React.FC<SelectProps> = ({
       </div>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-hidden">
+        <div className="absolute z-[9999] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-hidden">
           {searchable && (
             <div className="p-3 border-b border-gray-100">
               <input

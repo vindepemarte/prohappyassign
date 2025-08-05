@@ -210,8 +210,8 @@ class QueryOptimizer {
           .from('projects')
           .select(`
             id,
-            total_price,
-            worker_payment,
+            cost_gbp,
+            initial_word_count,
             client_id,
             created_at,
             status
@@ -226,8 +226,12 @@ class QueryOptimizer {
         const projects = data || [];
         const uniqueClients = new Set(projects.map(p => p.client_id));
 
-        const totalRevenue = projects.reduce((sum, p) => sum + (p.total_price || 0), 0);
-        const totalProfit = projects.reduce((sum, p) => sum + ((p.total_price || 0) - (p.worker_payment || 0)), 0);
+        const totalRevenue = projects.reduce((sum, p) => sum + (p.cost_gbp || 0), 0);
+        // Calculate worker payment based on word count (assuming £0.125 per 500 words)
+        const totalProfit = projects.reduce((sum, p) => {
+          const workerPayment = ((p.initial_word_count || 0) / 500) * 62.5; // £62.50 per 500 words
+          return sum + ((p.cost_gbp || 0) - workerPayment);
+        }, 0);
 
         // Group by month for monthly data
         const monthlyGroups = projects.reduce((groups, project) => {
@@ -242,8 +246,11 @@ class QueryOptimizer {
         const monthlyData = Object.entries(monthlyGroups).map(([month, monthProjects]) => ({
           month,
           projects: monthProjects.length,
-          revenue: monthProjects.reduce((sum, p) => sum + (p.total_price || 0), 0),
-          profit: monthProjects.reduce((sum, p) => sum + ((p.total_price || 0) - (p.worker_payment || 0)), 0)
+          revenue: monthProjects.reduce((sum, p) => sum + (p.cost_gbp || 0), 0),
+          profit: monthProjects.reduce((sum, p) => {
+            const workerPayment = ((p.initial_word_count || 0) / 500) * 62.5;
+            return sum + ((p.cost_gbp || 0) - workerPayment);
+          }, 0)
         }));
 
         const result = {

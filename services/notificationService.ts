@@ -308,6 +308,10 @@ export const sendNotification = async ({ target, payload }: { target: Notificati
                 errorMessage = 'Push notifications are not configured. Please contact support.';
             } else if (error.message?.includes('Failed to send a request')) {
                 errorMessage = 'Unable to connect to notification service. Please try again later.';
+            } else if (error.message?.includes('Function not found') || error.message?.includes('404')) {
+                errorMessage = 'Notification service is not available. Please contact support.';
+            } else if (error.message?.includes('500') || error.message?.includes('Internal Server Error')) {
+                errorMessage = 'Notification service is temporarily unavailable. Please try again later.';
             } else if (error.message) {
                 errorMessage = `Failed to send notification: ${error.message}`;
             }

@@ -495,14 +495,19 @@ export const assignWorkerToProject = async (projectId: number, workerId: string)
     projectCache.clear();
     queryOptimizer.invalidateCache('projects');
     
-    // Notify the assigned worker
-    fireAndForgetNotification(sendNotification({
-        target: { userIds: [workerId] },
-        payload: {
-            title: 'You have a new assignment!',
-            body: `You have been assigned to project #${projectId}.`
-        }
-    }));
+    // Notify the assigned worker (with error handling)
+    try {
+        fireAndForgetNotification(sendNotification({
+            target: { userIds: [workerId] },
+            payload: {
+                title: 'You have a new assignment!',
+                body: `You have been assigned to project #${projectId}.`
+            }
+        }));
+    } catch (notificationError) {
+        console.warn('Failed to send assignment notification:', notificationError);
+        // Don't fail the assignment if notification fails
+    }
 };
 
 /**

@@ -28,7 +28,7 @@ const AgentNotificationSender: React.FC = () => {
 
         try {
             const response = await sendNotificationWithGuarantee({
-                target: { role: target },
+                target: target === 'all' ? { role: undefined } : { role: target as UserRole },
                 payload: { title, body },
                 priority
             });
@@ -61,23 +61,25 @@ const AgentNotificationSender: React.FC = () => {
                         label="Target Audience"
                         containerClassName="md:col-span-1"
                         value={target}
-                        onChange={e => setTarget(e.target.value as TargetAudience)}
-                    >
-                        <option value="all">All Users</option>
-                        <option value="client">Clients Only</option>
-                        <option value="worker">Workers Only</option>
-                        <option value="agent">Agents Only</option>
-                    </Select>
+                        onChange={(value) => setTarget(value as TargetAudience)}
+                        options={[
+                            { value: 'all', label: 'All Users' },
+                            { value: 'client', label: 'Clients Only' },
+                            { value: 'worker', label: 'Workers Only' },
+                            { value: 'agent', label: 'Agents Only' }
+                        ]}
+                    />
                     <Select
                         label="Priority"
                         containerClassName="md:col-span-1"
                         value={priority}
-                        onChange={e => setPriority(e.target.value as 'low' | 'normal' | 'high')}
-                    >
-                        <option value="low">Low</option>
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                    </Select>
+                        onChange={(value) => setPriority(value as 'low' | 'normal' | 'high')}
+                        options={[
+                            { value: 'low', label: 'Low' },
+                            { value: 'normal', label: 'Normal' },
+                            { value: 'high', label: 'High' }
+                        ]}
+                    />
                     <Input
                         label="Notification Title"
                         containerClassName="md:col-span-2"
