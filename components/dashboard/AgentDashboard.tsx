@@ -259,7 +259,7 @@ const AgentDashboard: React.FC = () => {
             return;
         }
         const originalProjects = [...projects];
-        const updatedProjects = projects.map(p => p.id === projectId ? { ...p, worker_id: workerId, status: 'in_progress' } : p);
+        const updatedProjects = projects.map(p => p.id === projectId ? { ...p, worker_id: workerId, status: 'in_progress' as ProjectStatus } : p);
 
         // Optimistically update the UI
         setProjects(updatedProjects);
@@ -280,7 +280,7 @@ const AgentDashboard: React.FC = () => {
         }
 
         const originalProjects = [...projects];
-        const updatedProjects = projects.map(p => p.id === projectId ? { ...p, status: 'cancelled' as const } : p);
+        const updatedProjects = projects.map(p => p.id === projectId ? { ...p, status: 'cancelled' as ProjectStatus } : p);
 
         // Optimistically update the UI
         setProjects(updatedProjects);
@@ -446,8 +446,6 @@ const AgentDashboard: React.FC = () => {
                 isLoading={loadingState.isLoading}
                 error={loadingState.error}
                 onRetry={loadingActions.retry}
-                timeout={loadingState.timeout}
-                hasTimedOut={loadingState.hasTimedOut}
             >
                 {/* Conditional Content Based on View Mode */}
                 {viewMode === 'charts' ? (
@@ -512,12 +510,16 @@ const AgentDashboard: React.FC = () => {
                                                         <div className="flex space-x-2">
                                                             <Select
                                                                 containerClassName="flex-grow"
-                                                                onChange={(e) => setSelectedWorkers(prev => ({ ...prev, [project.id]: e.target.value }))}
-                                                                defaultValue=""
-                                                            >
-                                                                <option value="" disabled>Select a worker</option>
-                                                                {workers.map(w => <option key={w.id} value={w.id}>{w.full_name} ({w.id.substring(0, 6)}...)</option>)}
-                                                            </Select>
+                                                                onChange={(value) => setSelectedWorkers(prev => ({ ...prev, [project.id]: value }))}
+                                                                value={selectedWorkers[project.id] || ""}
+                                                                placeholder="Select a worker"
+                                                                options={[
+                                                                    ...workers.map(w => ({
+                                                                        value: w.id,
+                                                                        label: `${w.full_name} (${w.id.substring(0, 6)}...)`
+                                                                    }))
+                                                                ]}
+                                                            />
                                                             <Button className="!w-auto py-2 px-3 text-xs" onClick={() => handleAssignWorker(project.id)}>Assign</Button>
                                                         </div>
                                                     )}
@@ -526,14 +528,12 @@ const AgentDashboard: React.FC = () => {
                                                     <Select
                                                         label="Update Status:"
                                                         value={project.status}
-                                                        onChange={(e) => handleStatusChange(project.id, e.target.value as ProjectStatus)}
-                                                    >
-                                                        {ALL_STATUSES.map(status => (
-                                                            <option key={status} value={status}>
-                                                                {status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                            </option>
-                                                        ))}
-                                                    </Select>
+                                                        onChange={(value) => handleStatusChange(project.id, value as ProjectStatus)}
+                                                        options={ALL_STATUSES.map(status => ({
+                                                            value: status,
+                                                            label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                                        }))}
+                                                    />
                                                 </div>
 
                                                 {/* Refund Processing UI */}

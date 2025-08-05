@@ -64,7 +64,7 @@ export const useLoadingState = (
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     timeoutRef.current = setTimeout(() => {
       setState(prev => ({
         ...prev,
@@ -105,7 +105,7 @@ export const useLoadingState = (
   const retry = useCallback(() => {
     setState(prev => {
       const newRetryCount = prev.retryCount + 1;
-      
+
       if (newRetryCount > maxRetries) {
         return {
           ...prev,
@@ -125,7 +125,7 @@ export const useLoadingState = (
 
     // Add exponential backoff delay
     const delay = retryDelay * Math.pow(2, state.retryCount);
-    
+
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
     }
@@ -135,7 +135,7 @@ export const useLoadingState = (
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      
+
       timeoutRef.current = setTimeout(() => {
         setState(prev => ({
           ...prev,
@@ -205,7 +205,7 @@ export const useAsyncOperation = <T extends any[], R>(
       return result;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      
+
       if (loadingState.retryCount < (options.maxRetries || 3)) {
         actions.retry();
         // The retry will be handled by the timeout in the retry function

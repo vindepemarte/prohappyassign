@@ -33,7 +33,7 @@ class PerformanceMonitor {
   // Initialize performance monitoring
   initialize(): void {
     if (this.isMonitoring) return;
-    
+
     this.isMonitoring = true;
     this.monitorWebVitals();
     this.monitorMemoryUsage();
@@ -53,7 +53,7 @@ class PerformanceMonitor {
       const memory = (performance as any).memory;
       metric.memoryUsage = memory.usedJSHeapSize;
     }
-    
+
     this.metrics.set(name, metric);
   }
 
@@ -91,7 +91,7 @@ class PerformanceMonitor {
 
     // Store completed metric
     this.completedMetrics.push({ ...metric });
-    
+
     // Keep only last 1000 metrics to prevent memory leaks
     if (this.completedMetrics.length > 1000) {
       this.completedMetrics.splice(0, this.completedMetrics.length - 1000);
@@ -102,7 +102,7 @@ class PerformanceMonitor {
 
     // Clean up
     this.metrics.delete(name);
-    
+
     return metric;
   }
 
@@ -113,7 +113,7 @@ class PerformanceMonitor {
     metadata?: Record<string, any>
   ): Promise<T> {
     this.start(name, metadata);
-    
+
     try {
       const result = await fn();
       this.end(name);
@@ -127,7 +127,7 @@ class PerformanceMonitor {
   // Add a listener for performance metrics
   addListener(listener: (metric: PerformanceMetric) => void): () => void {
     this.listeners.push(listener);
-    
+
     // Return unsubscribe function
     return () => {
       const index = this.listeners.indexOf(listener);
@@ -147,12 +147,12 @@ class PerformanceMonitor {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
         this.webVitals.lcp = lastEntry.startTime;
-        
+
         if (lastEntry.startTime > 2500) {
           console.warn(`Poor LCP: ${lastEntry.startTime.toFixed(2)}ms (should be < 2500ms)`);
         }
       });
-      
+
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
       this.observers.push(lcpObserver);
     } catch (e) {
@@ -164,15 +164,18 @@ class PerformanceMonitor {
       const fidObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry) => {
-          const fid = entry.processingStart - entry.startTime;
-          this.webVitals.fid = fid;
-          
-          if (fid > 100) {
-            console.warn(`Poor FID: ${fid.toFixed(2)}ms (should be < 100ms)`);
+          // Type guard to check if entry has processingStart property
+          if ('processingStart' in entry && typeof entry.processingStart === 'number') {
+            const fid = entry.processingStart - entry.startTime;
+            this.webVitals.fid = fid;
+
+            if (fid > 100) {
+              console.warn(`Poor FID: ${fid.toFixed(2)}ms (should be < 100ms)`);
+            }
           }
         });
       });
-      
+
       fidObserver.observe({ entryTypes: ['first-input'] });
       this.observers.push(fidObserver);
     } catch (e) {
@@ -190,12 +193,12 @@ class PerformanceMonitor {
           }
         });
         this.webVitals.cls = clsValue;
-        
+
         if (clsValue > 0.1) {
           console.warn(`Poor CLS: ${clsValue.toFixed(3)} (should be < 0.1)`);
         }
       });
-      
+
       clsObserver.observe({ entryTypes: ['layout-shift'] });
       this.observers.push(clsObserver);
     } catch (e) {
@@ -210,7 +213,7 @@ class PerformanceMonitor {
           this.webVitals.fcp = entry.startTime;
         });
       });
-      
+
       fcpObserver.observe({ entryTypes: ['paint'] });
       this.observers.push(fcpObserver);
     } catch (e) {
@@ -227,7 +230,7 @@ class PerformanceMonitor {
       const usedMB = Math.round(memory.usedJSHeapSize / 1048576);
       const totalMB = Math.round(memory.totalJSHeapSize / 1048576);
       const limitMB = Math.round(memory.jsHeapSizeLimit / 1048576);
-      
+
       // Warn if memory usage is high
       if (usedMB / limitMB > 0.8) {
         console.warn(`High memory usage: ${usedMB}MB / ${limitMB}MB (${Math.round(usedMB / limitMB * 100)}%)`);
@@ -261,10 +264,10 @@ class PerformanceMonitor {
   // Get performance summary
   getSummary(): Record<string, { count: number; avgDuration: number; maxDuration: number; type?: string }> {
     const summary: Record<string, { count: number; totalDuration: number; maxDuration: number; type?: string }> = {};
-    
+
     this.getMetrics().forEach(metric => {
       if (!metric.duration) return;
-      
+
       if (!summary[metric.name]) {
         summary[metric.name] = {
           count: 0,
@@ -273,7 +276,7 @@ class PerformanceMonitor {
           type: metric.type
         };
       }
-      
+
       summary[metric.name].count++;
       summary[metric.name].totalDuration += metric.duration;
       summary[metric.name].maxDuration = Math.max(summary[metric.name].maxDuration, metric.duration);
@@ -301,16 +304,16 @@ class PerformanceMonitor {
   } {
     const recommendations: string[] = [];
     const summary = this.getSummary();
-    
+
     // Analyze Web Vitals
     if (this.webVitals.lcp && this.webVitals.lcp > 2500) {
       recommendations.push('Optimize Largest Contentful Paint (LCP) - consider image optimization and server response times');
     }
-    
+
     if (this.webVitals.fid && this.webVitals.fid > 100) {
       recommendations.push('Reduce First Input Delay (FID) - minimize JavaScript execution time');
     }
-    
+
     if (this.webVitals.cls && this.webVitals.cls > 0.1) {
       recommendations.push('Improve Cumulative Layout Shift (CLS) - ensure proper sizing for images and ads');
     }
@@ -320,7 +323,7 @@ class PerformanceMonitor {
       if (stats.avgDuration > 100 && stats.type === 'render') {
         recommendations.push(`Optimize ${name} component - average render time is ${stats.avgDuration.toFixed(2)}ms`);
       }
-      
+
       if (stats.avgDuration > 1000 && stats.type === 'network') {
         recommendations.push(`Optimize ${name} network request - average response time is ${stats.avgDuration.toFixed(2)}ms`);
       }
