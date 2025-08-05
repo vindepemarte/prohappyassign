@@ -28,8 +28,27 @@ NODE_ENV=production
 - **Dockerfile**: Use the provided Dockerfile
 
 ### 4. Supabase Edge Functions Setup
-Before deployment, you need to deploy your Supabase edge functions:
 
+#### Option A: Automated Deployment (Recommended)
+Use the complete deployment script:
+
+```bash
+# One-time setup: Link to your Supabase project
+supabase login
+supabase link --project-ref your-project-ref
+
+# Deploy everything (app + edge functions)
+./deploy-complete.sh
+```
+
+#### Option B: GitHub Actions (Automatic on Push)
+1. Add these secrets to your GitHub repository (Settings → Secrets):
+   - `SUPABASE_ACCESS_TOKEN`: Your Supabase access token
+   - `SUPABASE_PROJECT_REF`: Your Supabase project reference
+
+2. Push to main branch - edge functions deploy automatically
+
+#### Option C: Manual Deployment
 ```bash
 # Install Supabase CLI
 npm install -g supabase
@@ -61,6 +80,20 @@ npx web-push generate-vapid-keys
 Make sure your Supabase database has all the required tables. You can find the schema in your project.
 
 ### 7. Deploy
+
+#### Automated Deployment (Recommended)
+```bash
+# Run the complete deployment script
+./deploy-complete.sh
+```
+
+This script will:
+- Build and test your application
+- Deploy edge functions to Supabase
+- Push code to Git (triggers Coolify deployment)
+- Show you a post-deployment checklist
+
+#### Manual Deployment
 1. Push your code to GitHub
 2. In Coolify, click "Deploy"
 3. Monitor the build logs
