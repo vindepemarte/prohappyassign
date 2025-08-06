@@ -108,6 +108,23 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator {
   color: #1f2937 !important;
 }
 
+/* Additional text color fixes */
+.form-input,
+.form-input:focus,
+.form-input:active,
+.form-input:hover {
+  color: #1f2937 !important;
+  background-color: white !important;
+}
+
+/* Ensure all input types have proper colors */
+input.form-input,
+select.form-input,
+textarea.form-input {
+  color: #1f2937 !important;
+  background-color: white !important;
+}
+
 /* Ensure text visibility in components */
 .bg-gray-50 p,
 .bg-gray-50 h4,
@@ -132,6 +149,30 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator {
 
 .debug-component p {
   color: #4b5563 !important;
+}
+
+/* Fix dropdown text visibility */
+.dropdown-item,
+.dropdown-item span,
+select option {
+  color: #1f2937 !important;
+  background-color: white !important;
+}
+
+.dropdown-item:hover {
+  color: #1f2937 !important;
+  background-color: #f3f4f6 !important;
+}
+
+/* Fix select dropdown text */
+select {
+  color: #1f2937 !important;
+  background-color: white !important;
+}
+
+select option {
+  color: #1f2937 !important;
+  background-color: white !important;
 }
 
 /* ===== CONSISTENT BUTTONS ===== */
@@ -232,19 +273,27 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator {
   @apply absolute w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-hidden;
   z-index: var(--z-dropdown);
   animation: slideDown 150ms ease-out;
+  background-color: white !important; /* Force white background */
+}
+
+.dropdown * {
+  color: inherit !important; /* Ensure text inherits proper colors */
 }
 
 .dropdown-item {
   @apply px-4 py-3 cursor-pointer transition-colors duration-150;
   @apply text-gray-800 hover:bg-blue-50 hover:text-gray-900;
+  color: #1f2937 !important; /* Force dark text color */
 }
 
 .dropdown-item--selected {
   @apply bg-blue-50 font-semibold text-blue-800;
+  color: #1e40af !important; /* Force blue text color for selected items */
 }
 
 .dropdown-item--disabled {
   @apply text-gray-400 cursor-not-allowed bg-gray-50;
+  color: #9ca3af !important; /* Force gray text color for disabled items */
 }
 
 /* ===== CONSISTENT LOADING STATES ===== */

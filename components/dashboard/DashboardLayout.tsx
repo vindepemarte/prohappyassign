@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Logo from '../Logo';
 import Button from '../Button';
 import NotificationManager from './NotificationManager';
+import NotificationBell from '../notifications/NotificationBell';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -22,6 +23,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
               <span className="ml-3 font-bold text-xl text-white hidden sm:block">ProHappyAssignments</span>
             </div>
             <div className="flex items-center space-x-4">
+              <NotificationBell />
               <div className="text-right">
                 <p className="font-semibold text-white">{profile?.full_name}</p>
                 <p className="text-xs text-blue-100 capitalize">{profile?.role} Account</p>

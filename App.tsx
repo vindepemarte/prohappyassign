@@ -7,12 +7,6 @@ import { initializeOrderReferences } from './services/initializeOrderReferences'
 import { initializeNotificationSystem } from './services/notificationTracker';
 import { performanceMonitor } from './utils/performanceMonitor';
 
-const SplashScreen: React.FC = () => (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#4A90E2]">
-        <Logo className="w-48 h-48 animate-pulse" />
-    </div>
-);
-
 const App: React.FC = () => {
   const { session, loading } = useAuth();
 
@@ -50,14 +44,12 @@ const App: React.FC = () => {
     };
   }, [session]);
 
-  if (loading) {
-    return <SplashScreen />;
-  }
-
+  // Show auth page immediately if no session, no loading screen
   if (!session) {
     return <AuthPage />;
   }
 
+  // Show dashboard immediately if session exists, no loading screen
   return <Dashboard />;
 };
 

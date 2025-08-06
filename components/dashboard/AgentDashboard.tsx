@@ -16,6 +16,7 @@ import { ProfitCalculator } from '../../utils/profitCalculator';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import { useRobustLoading } from '../../hooks/useRobustLoading';
 import { performanceMonitor } from '../../utils/performanceMonitor';
+import { supabase } from '../../services/supabase';
 
 const ALL_STATUSES: ProjectStatus[] = [
     'pending_payment_approval',
@@ -74,6 +75,7 @@ const AgentDashboard: React.FC = () => {
     const [selectedModuleName, setSelectedModuleName] = useState('');
     const [uniqueClientIds, setUniqueClientIds] = useState<string[]>([]);
     const [uniqueModuleNames, setUniqueModuleNames] = useState<string[]>([]);
+    const [clientNames, setClientNames] = useState<Record<string, string>>({});
 
     // Analytics dashboard state
     const [viewMode, setViewMode] = useState<'docs' | 'charts'>('docs');
@@ -139,10 +141,14 @@ const AgentDashboard: React.FC = () => {
                 }
             }
 
-            // Search term filter (order reference)
+            // Search term filter (order reference or client name)
             if (searchTerm.trim()) {
                 const orderRef = project.order_reference || '';
-                if (!orderRef.toLowerCase().includes(searchTerm.toLowerCase())) {
+                const clientName = clientNames[project.client_id] || '';
+                const searchLower = searchTerm.toLowerCase();
+                
+                if (!orderRef.toLowerCase().includes(searchLower) && 
+                    !clientName.toLowerCase().includes(searchLower)) {
                     return false;
                 }
             }
@@ -180,6 +186,24 @@ const AgentDashboard: React.FC = () => {
 
             setProjects(projectsData);
             setWorkers(workersData);
+
+            // Fetch client names
+            const uniqueClientIds = [...new Set(projectsData.map(p => p.client_id))];
+            if (uniqueClientIds.length > 0) {
+                const { data: clientsData, error } = await supabase
+                    .from('users')
+                    .select('id, full_name')
+                    .in('id', uniqueClientIds);
+
+                if (!error && clientsData) {
+                    const clientNamesMap = clientsData.reduce((acc, client) => {
+                        acc[client.id] = client.full_name || 'Unknown Client';
+                        return acc;
+                    }, {} as Record<string, string>);
+                    setClientNames(clientNamesMap);
+                }
+            }
+
             loadingActions.stopLoading();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
@@ -350,13 +374,13 @@ const AgentDashboard: React.FC = () => {
                         {/* Search by Order Reference */}
                         <div className="flex-1 min-w-0">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Search by Order Reference
+                                Search by Order Reference or Client Name
                             </label>
                             <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={handleSearchChange}
-                                placeholder="Enter order reference..."
+                                placeholder="Enter order reference or client name..."
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                             />
                         </div>
@@ -364,7 +388,7 @@ const AgentDashboard: React.FC = () => {
                         {/* Client ID Filter */}
                         <div className="flex-1 min-w-0">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Filter by Client ID
+                                Filter by Client Name
                             </label>
                             <select
                                 value={selectedClientId}
@@ -374,7 +398,7 @@ const AgentDashboard: React.FC = () => {
                                 <option value="">All Clients</option>
                                 {uniqueClientIds.map(clientId => (
                                     <option key={clientId} value={clientId}>
-                                        {clientId.substring(0, 8)}...
+                                        {clientNames[clientId] || clientId.substring(0, 8) + '...'}
                                     </option>
                                 ))}
                             </select>
@@ -510,7 +534,7 @@ const AgentDashboard: React.FC = () => {
                                                 </div>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <p className="text-xs text-gray-500">
-                                                        Client ID: {project.client_id.substring(0, 8)}...
+                                                        Client: {clientNames[project.client_id] || project.client_id.substring(0, 8) + '...'}
                                                     </p>
                                                     <button
                                                         onClick={() => copyToClipboard(project.client_id)}

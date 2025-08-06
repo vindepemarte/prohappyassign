@@ -25,9 +25,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
+      setLoading(false); // Set loading to false immediately after getting session
+      
       if (session?.user) {
-        // Fetch profile from the new 'users' table using maybeSingle()
-        // to prevent errors if the profile hasn't been created yet.
+        // Fetch profile asynchronously without blocking the UI
         const { data: userProfile, error } = await supabase
           .from('users')
           .select('*')
@@ -36,7 +37,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (error) console.error('Error fetching profile on initial load:', error.message);
         setProfile(userProfile);
       }
-      setLoading(false);
     };
     
     getSessionAndProfile();
@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setLoading(true);
+          // Don't set loading to true on auth state change - keep UI responsive
           // Fetch profile using maybeSingle() to prevent errors during the
           // race condition right after sign-up.
           const { data: userProfile, error } = await supabase
@@ -59,15 +59,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           setProfile(userProfile);
           
-          // Subscribe user to push notifications
-          try {
-            await subscribeUser(session.user.id);
+          // Subscribe user to push notifications asynchronously
+          subscribeUser(session.user.id).then(() => {
             console.log('User subscribed to push notifications');
-          } catch (subscriptionError) {
+          }).catch((subscriptionError) => {
             console.warn('Failed to subscribe user to push notifications:', subscriptionError);
-          }
-          
-          setLoading(false);
+          });
         } else {
           setProfile(null);
         }
