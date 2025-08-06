@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../services/supabase';
 import { Session, User } from '@supabase/supabase-js';
 import { Profile } from '../types';
+import { subscribeUser } from '../services/notificationService';
 
 interface AuthContextType {
   session: Session | null;
@@ -57,6 +58,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
              console.error('Error fetching profile on auth state change:', error.message);
           }
           setProfile(userProfile);
+          
+          // Subscribe user to push notifications
+          try {
+            await subscribeUser(session.user.id);
+            console.log('User subscribed to push notifications');
+          } catch (subscriptionError) {
+            console.warn('Failed to subscribe user to push notifications:', subscriptionError);
+          }
+          
           setLoading(false);
         } else {
           setProfile(null);

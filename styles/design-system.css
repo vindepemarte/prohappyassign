@@ -66,10 +66,11 @@
 
 /* ===== CONSISTENT FORM ELEMENTS ===== */
 .form-input {
-  @apply w-full px-4 py-3 text-base border border-gray-200 rounded-xl bg-gray-50 text-gray-800 placeholder-gray-400;
+  @apply w-full px-4 py-3 text-base border border-gray-200 rounded-xl bg-white text-gray-800 placeholder-gray-400;
   @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white;
   @apply transition-all duration-200;
   @apply shadow-sm focus:shadow-lg;
+  background-color: white !important;
 }
 
 .form-input--error {
@@ -88,6 +89,23 @@
 
 .form-input--large {
   @apply px-5 py-4 text-lg;
+}
+
+/* Fix for date inputs and number inputs */
+input[type="date"].form-input,
+input[type="number"].form-input,
+input[type="datetime-local"].form-input {
+  background-color: white !important;
+  color: #1f2937 !important;
+}
+
+input[type="date"].form-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+}
+
+/* Fix for dark text on inputs */
+.form-input:not(:placeholder-shown) {
+  color: #1f2937 !important;
 }
 
 /* ===== CONSISTENT BUTTONS ===== */
@@ -192,15 +210,15 @@
 
 .dropdown-item {
   @apply px-4 py-3 cursor-pointer transition-colors duration-150;
-  @apply text-gray-800 hover:bg-blue-50;
+  @apply text-gray-800 hover:bg-blue-50 hover:text-gray-900;
 }
 
 .dropdown-item--selected {
-  @apply bg-blue-50 font-semibold;
+  @apply bg-blue-50 font-semibold text-blue-800;
 }
 
 .dropdown-item--disabled {
-  @apply text-gray-400 cursor-not-allowed;
+  @apply text-gray-400 cursor-not-allowed bg-gray-50;
 }
 
 /* ===== CONSISTENT LOADING STATES ===== */

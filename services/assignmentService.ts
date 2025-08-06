@@ -10,7 +10,7 @@ import { OrderReferenceGenerator } from './orderReferenceGenerator';
 import { queryOptimizer } from '../utils/queryOptimizer';
 import { projectCache, userCache } from '../utils/cacheManager';
 
-const PROJECT_COLUMNS = 'id, client_id, worker_id, agent_id, title, description, status, initial_word_count, adjusted_word_count, cost_gbp, deadline, order_reference, deadline_charge, urgency_level, created_at, updated_at';
+const PROJECT_COLUMNS = 'id, client_id, worker_id, agent_id, title, description, status, initial_word_count, adjusted_word_count, cost_gbp, deadline, order_reference, deadline_charge, urgency_level, adjustment_type, created_at, updated_at';
 
 /**
  * Calculates the price based on word count from the pricing table (legacy function).
@@ -653,6 +653,7 @@ export const requestWordCountChange = async (projectId: number, newWordCount: nu
             deadline_charge: pricingBreakdown.deadlineCharge,
             urgency_level: pricingBreakdown.urgencyLevel,
             status: 'pending_quote_approval',
+            adjustment_type: 'word_count'
         })
         .eq('id', projectId);
     
@@ -704,6 +705,7 @@ export const requestDeadlineChange = async (projectId: number, newDeadline: Date
             deadline_charge: pricingBreakdown.deadlineCharge,
             urgency_level: pricingBreakdown.urgencyLevel,
             status: 'pending_quote_approval',
+            adjustment_type: 'deadline'
         })
         .eq('id', projectId);
     
@@ -740,7 +742,10 @@ export const requestDeadlineChange = async (projectId: number, newDeadline: Date
 export const approveQuoteChange = async (projectId: number): Promise<void> => {
     const { error } = await supabase
         .from('projects')
-        .update({ status: 'in_progress' })
+        .update({ 
+            status: 'in_progress',
+            adjustment_type: null
+        })
         .eq('id', projectId);
     
     if (error) {
@@ -789,6 +794,7 @@ export const rejectQuoteChange = async (projectId: number, originalWordCount: nu
             cost_gbp: originalPricingBreakdown.totalPrice,
             deadline_charge: originalPricingBreakdown.deadlineCharge,
             urgency_level: originalPricingBreakdown.urgencyLevel,
+            adjustment_type: null
         })
         .eq('id', projectId);
     
@@ -838,6 +844,7 @@ export const rejectDeadlineChange = async (projectId: number, originalDeadline: 
             cost_gbp: originalPricingBreakdown.totalPrice,
             deadline_charge: originalPricingBreakdown.deadlineCharge,
             urgency_level: originalPricingBreakdown.urgencyLevel,
+            adjustment_type: null
         })
         .eq('id', projectId);
     

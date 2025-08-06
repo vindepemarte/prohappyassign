@@ -10,6 +10,7 @@ import Select from '../common/Select';
 import LoadingWrapper from '../common/LoadingWrapper';
 import AgentNotificationSender from './AgentNotificationSender';
 import NotificationStatusMonitor from './NotificationStatusMonitor';
+import PushNotificationTester from '../debug/PushNotificationTester';
 import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
 import { ProfitCalculator } from '../../utils/profitCalculator';
 import AnalyticsDashboard from './AnalyticsDashboard';
@@ -413,6 +414,11 @@ const AgentDashboard: React.FC = () => {
 
             <div className="mb-8">
                 <AgentNotificationSender />
+            </div>
+
+            {/* Push Notification Tester */}
+            <div className="mb-8">
+                <PushNotificationTester />
             </div>
 
             {/* Notification Status Monitor */}

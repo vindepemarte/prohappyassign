@@ -172,10 +172,24 @@ const MyProjects: React.FC = () => {
                         {filteredAndSortedProjects.map(project => {
                              if (project.status === 'pending_quote_approval') {
                                 const originalPrice = calculatePrice(project.initial_word_count);
+                                const isDeadlineAdjustment = (project as any).adjustment_type === 'deadline';
+                                const isWordCountAdjustment = (project as any).adjustment_type === 'word_count';
+                                
                                 return (
-                                    <div key={project.id} className="border-2 border-yellow-400 p-4 rounded-xl bg-yellow-50 shadow-lg">
-                                        <div className="text-center mb-3 p-2 bg-yellow-200 text-yellow-800 font-bold rounded-md">
-                                            ACTION REQUIRED: New Quote Proposed
+                                    <div key={project.id} className={`border-2 p-4 rounded-xl shadow-lg ${
+                                        isDeadlineAdjustment 
+                                            ? 'border-blue-400 bg-blue-50' 
+                                            : 'border-yellow-400 bg-yellow-50'
+                                    }`}>
+                                        <div className={`text-center mb-3 p-2 font-bold rounded-md ${
+                                            isDeadlineAdjustment 
+                                                ? 'bg-blue-200 text-blue-800' 
+                                                : 'bg-yellow-200 text-yellow-800'
+                                        }`}>
+                                            {isDeadlineAdjustment 
+                                                ? '📅 ACTION REQUIRED: Deadline Adjustment Requested' 
+                                                : '📊 ACTION REQUIRED: Word Count Adjustment Requested'
+                                            }
                                         </div>
                                         <p className="font-bold text-lg text-purple-800">{project.title}</p>
                                         {project.order_reference && (
@@ -183,21 +197,54 @@ const MyProjects: React.FC = () => {
                                                 Order: <span className="font-mono font-semibold text-blue-600">{project.order_reference}</span>
                                             </p>
                                         )}
-                                        <div className="mt-4 border-t pt-3 text-sm text-gray-700 grid grid-cols-2 gap-x-4 gap-y-2">
-                                            <div>
-                                                <p className="font-semibold">Original:</p>
-                                                <p>{project.initial_word_count.toLocaleString()} words</p>
-                                                <p>£{originalPrice.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
+                                        
+                                        {isDeadlineAdjustment ? (
+                                            <div className="mt-4 border-t pt-3 text-sm text-gray-700">
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                                                    <div>
+                                                        <p className="font-semibold">Current Deadline:</p>
+                                                        <p>{new Date(project.deadline).toLocaleDateString()}</p>
+                                                        <p className="font-semibold mt-2">Word Count:</p>
+                                                        <p>{(project.adjusted_word_count || project.initial_word_count).toLocaleString()} words</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-blue-700">New Pricing:</p>
+                                                        <p>£{project.cost_gbp.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            *Price updated based on new deadline urgency
+                                                        </p>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-semibold text-purple-700">New Proposal:</p>
-                                                <p>{project.adjusted_word_count?.toLocaleString()} words</p>
-                                                <p>£{project.cost_gbp.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
+                                        ) : (
+                                            <div className="mt-4 border-t pt-3 text-sm text-gray-700 grid grid-cols-2 gap-x-4 gap-y-2">
+                                                <div>
+                                                    <p className="font-semibold">Original:</p>
+                                                    <p>{project.initial_word_count.toLocaleString()} words</p>
+                                                    <p>£{originalPrice.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-purple-700">New Proposal:</p>
+                                                    <p>{project.adjusted_word_count?.toLocaleString()} words</p>
+                                                    <p>£{project.cost_gbp.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
+                                        
                                         <div className="mt-4 flex flex-col sm:flex-row sm:justify-end sm:space-x-3 space-y-2 sm:space-y-0">
-                                            <Button onClick={() => handleRejectQuote(project)} variant="danger" className="py-2 px-4 !w-auto text-sm">Reject & Revert</Button>
-                                            <Button onClick={() => handleApproveQuote(project.id)} className="py-2 px-4 !w-auto text-sm bg-green-600 border-green-800 hover:bg-green-700">Approve New Quote</Button>
+                                            <Button 
+                                                onClick={() => isDeadlineAdjustment ? handleRejectDeadlineChange(project, new Date(project.deadline)) : handleRejectQuote(project)} 
+                                                variant="danger" 
+                                                className="py-2 px-4 !w-auto text-sm"
+                                            >
+                                                {isDeadlineAdjustment ? 'Reject Deadline Change' : 'Reject & Revert'}
+                                            </Button>
+                                            <Button 
+                                                onClick={() => handleApproveQuote(project.id)} 
+                                                className="py-2 px-4 !w-auto text-sm bg-green-600 border-green-800 hover:bg-green-700"
+                                            >
+                                                {isDeadlineAdjustment ? 'Approve New Deadline' : 'Approve New Quote'}
+                                            </Button>
                                         </div>
                                     </div>
                                 )
