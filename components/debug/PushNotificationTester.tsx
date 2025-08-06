@@ -85,23 +85,23 @@ const PushNotificationTester: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">🧪 Push Notification Tester</h3>
+      <div className="bg-white rounded-lg shadow p-6 debug-component">
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">🧪 Push Notification Tester</h3>
         <p className="text-gray-600">Please log in to test push notifications.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">🧪 Push Notification Tester</h3>
+    <div className="bg-white rounded-lg shadow p-6 debug-component">
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">🧪 Push Notification Tester</h3>
       
       <div className="space-y-4">
         {/* Permission Status */}
         <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium mb-2">Permission Status</h4>
+          <h4 className="font-medium mb-2 text-gray-800">Permission Status</h4>
           {permissionStatus ? (
-            <div className="text-sm space-y-1">
+            <div className="text-sm space-y-1 text-gray-700">
               <p><strong>Supported:</strong> {permissionStatus.supported ? '✅ Yes' : '❌ No'}</p>
               <p><strong>Permission:</strong> {permissionStatus.permission}</p>
               <p><strong>Can Request:</strong> {permissionStatus.canRequest ? '✅ Yes' : '❌ No'}</p>
@@ -116,15 +116,15 @@ const PushNotificationTester: React.FC = () => {
 
         {/* Subscription Status */}
         <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-medium mb-2">Subscription Status</h4>
-          <p className="text-sm">{subscriptionStatus}</p>
+          <h4 className="font-medium mb-2 text-gray-800">Subscription Status</h4>
+          <p className="text-sm text-gray-700">{subscriptionStatus}</p>
         </div>
 
         {/* Test Result */}
         {testResult && (
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-medium mb-2">Test Result</h4>
-            <p className="text-sm">{testResult}</p>
+            <h4 className="font-medium mb-2 text-blue-800">Test Result</h4>
+            <p className="text-sm text-blue-700">{testResult}</p>
           </div>
         )}
 
@@ -165,8 +165,8 @@ const PushNotificationTester: React.FC = () => {
 
         {/* Debug Info */}
         <details className="bg-gray-50 p-4 rounded-lg">
-          <summary className="font-medium cursor-pointer">Debug Information</summary>
-          <div className="mt-2 text-xs space-y-1">
+          <summary className="font-medium cursor-pointer text-gray-800">Debug Information</summary>
+          <div className="mt-2 text-xs space-y-1 text-gray-600">
             <p><strong>User ID:</strong> {user.id}</p>
             <p><strong>Browser:</strong> {navigator.userAgent}</p>
             <p><strong>Service Worker Support:</strong> {'serviceWorker' in navigator ? '✅' : '❌'}</p>

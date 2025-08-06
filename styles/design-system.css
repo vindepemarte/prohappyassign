@@ -108,6 +108,32 @@ input[type="date"].form-input::-webkit-calendar-picker-indicator {
   color: #1f2937 !important;
 }
 
+/* Ensure text visibility in components */
+.bg-gray-50 p,
+.bg-gray-50 h4,
+.bg-gray-50 summary {
+  color: #374151 !important;
+}
+
+.bg-blue-50 p,
+.bg-blue-50 h4 {
+  color: #1e40af !important;
+}
+
+/* Debug component specific fixes */
+.debug-component {
+  color: #374151;
+}
+
+.debug-component h3,
+.debug-component h4 {
+  color: #1f2937 !important;
+}
+
+.debug-component p {
+  color: #4b5563 !important;
+}
+
 /* ===== CONSISTENT BUTTONS ===== */
 .btn {
   @apply relative overflow-hidden w-full text-center font-bold uppercase tracking-wider;
