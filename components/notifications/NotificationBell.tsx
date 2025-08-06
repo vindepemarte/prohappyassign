@@ -33,9 +33,31 @@ const NotificationBell: React.FC = () => {
             filter: `user_id=eq.${user.id}`
           }, 
           (payload) => {
+            console.log('New notification received:', payload);
             const newNotification = payload.new as Notification;
             setNotifications(prev => [newNotification, ...prev]);
             setUnreadCount(prev => prev + 1);
+          }
+        )
+        .on('postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notification_history',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Notification updated:', payload);
+            const updatedNotification = payload.new as Notification;
+            setNotifications(prev => 
+              prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
+            );
+            // Recalculate unread count
+            setNotifications(current => {
+              const unreadCount = current.filter(n => !n.is_read).length;
+              setUnreadCount(unreadCount);
+              return current;
+            });
           }
         )
         .subscribe();

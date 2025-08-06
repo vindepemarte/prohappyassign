@@ -107,10 +107,34 @@ export const createNewProject = async (data: NewProjectFormData, userId: string)
     const deadlineDate = new Date(data.deadline);
     const pricingBreakdown = calculateEnhancedPrice(data.wordCount, deadlineDate);
 
-    // 2. Generate unique order reference
-    const orderReference = await OrderReferenceGenerator.generate();
+    // 2. Generate unique order reference with retry logic
+    let orderReference: string;
+    let attempts = 0;
+    const maxAttempts = 5;
+    
+    while (attempts < maxAttempts) {
+        try {
+            orderReference = await OrderReferenceGenerator.generate();
+            break;
+        } catch (error) {
+            attempts++;
+            console.error(`Order reference generation attempt ${attempts} failed:`, error);
+            if (attempts >= maxAttempts) {
+                // Fallback to timestamp-based reference
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const timestamp = Date.now() % 1000000;
+                orderReference = `ORD-${year}-${month}-${String(timestamp).padStart(6, '0')}`;
+                console.warn(`Using fallback order reference: ${orderReference}`);
+                break;
+            }
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 200 * attempts));
+        }
+    }
 
-    // 3. Insert project record to get an ID
+    // 3. Insert project record to get an ID with retry logic for duplicate order reference
     const projectToInsert = {
         client_id: userId,
         title: data.title,
@@ -120,18 +144,61 @@ export const createNewProject = async (data: NewProjectFormData, userId: string)
         cost_gbp: pricingBreakdown.totalPrice,
         deadline_charge: pricingBreakdown.deadlineCharge,
         urgency_level: pricingBreakdown.urgencyLevel,
-        order_reference: orderReference,
+        order_reference: orderReference!,
         status: 'pending_payment_approval' as const,
     };
 
-    const { data: projectData, error: projectError } = await supabase
-        .from('projects')
-        .insert([projectToInsert])
-        .select()
-        .single();
+    let projectData;
+    let insertAttempts = 0;
+    const maxInsertAttempts = 3;
+    
+    while (insertAttempts < maxInsertAttempts) {
+        try {
+            const { data, error } = await supabase
+                .from('projects')
+                .insert([projectToInsert])
+                .select()
+                .single();
 
-    if (projectError || !projectData) {
-        console.error('Error inserting project:', projectError);
+            if (error) {
+                // Check if it's a duplicate order reference error
+                if (error.code === '23505' && error.message?.includes('order_reference')) {
+                    insertAttempts++;
+                    console.warn(`Duplicate order reference detected: ${orderReference}. Generating new one... (attempt ${insertAttempts})`);
+                    
+                    if (insertAttempts >= maxInsertAttempts) {
+                        throw new Error('Failed to generate unique order reference after multiple attempts. Please try again.');
+                    }
+                    
+                    // Generate a new order reference
+                    const now = new Date();
+                    const year = now.getFullYear();
+                    const month = String(now.getMonth() + 1).padStart(2, '0');
+                    const timestamp = Date.now() % 1000000;
+                    const randomSuffix = Math.floor(Math.random() * 100);
+                    orderReference = `ORD-${year}-${month}-${String(timestamp + randomSuffix).padStart(6, '0')}`;
+                    projectToInsert.order_reference = orderReference;
+                    
+                    // Wait before retry
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    continue;
+                } else {
+                    throw error;
+                }
+            }
+
+            projectData = data;
+            break;
+        } catch (error) {
+            if (insertAttempts >= maxInsertAttempts - 1) {
+                console.error('Error inserting project:', error);
+                throw new Error('Failed to save your project. Please try again.');
+            }
+            insertAttempts++;
+        }
+    }
+
+    if (!projectData) {
         throw new Error('Failed to save your project. Please try again.');
     }
     

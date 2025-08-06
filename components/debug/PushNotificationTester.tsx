@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { subscribeUser, getNotificationPermissionStatus, sendNotification } from '../../services/notificationService';
+import { supabase } from '../../services/supabase';
 import Button from '../Button';
 
 const PushNotificationTester: React.FC = () => {
@@ -64,6 +65,27 @@ const PushNotificationTester: React.FC = () => {
       if (result.success) {
         setTestResult('✅ Test notification sent successfully');
         console.log('Notification result:', result);
+        
+        // Also manually add to notification_history to ensure it appears in the bell
+        try {
+          const { error: dbError } = await supabase
+            .from('notification_history')
+            .insert({
+              user_id: user.id,
+              title: '🧪 Test Notification',
+              body: 'This is a test push notification from ProHappy!',
+              delivery_status: 'sent',
+              is_read: false
+            });
+            
+          if (dbError) {
+            console.error('Error logging test notification to database:', dbError);
+          } else {
+            console.log('Test notification logged to database successfully');
+          }
+        } catch (dbError) {
+          console.error('Database logging error:', dbError);
+        }
       } else {
         setTestResult(`❌ Failed to send notification: ${result.error || 'Unknown error'}`);
       }
