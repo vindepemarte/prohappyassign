@@ -122,7 +122,7 @@ const Button: React.FC<ButtonProps> = ({
       <div className="relative flex items-center justify-center space-x-2">
         {loading ? (
           <>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <div className="loading-spinner loading-spinner--small border-white border-t-transparent"></div>
             <span>Loading...</span>
           </>
         ) : (
