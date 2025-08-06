@@ -194,7 +194,7 @@ const Select: React.FC<SelectProps> = ({
       </div>
 
       {isOpen && (
-        <div className="absolute z-[9999] w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-hidden">
+        <div className="dropdown">
           {searchable && (
             <div className="p-3 border-b border-gray-100">
               <input
@@ -219,13 +219,10 @@ const Select: React.FC<SelectProps> = ({
                 <div
                   key={option.value}
                   className={`
-                    px-4 py-3 cursor-pointer transition-colors duration-150
-                    ${option.disabled 
-                      ? 'text-gray-400 cursor-not-allowed' 
-                      : 'text-gray-800 hover:bg-blue-50'
-                    }
+                    dropdown-item
+                    ${option.disabled ? 'dropdown-item--disabled' : ''}
                     ${index === highlightedIndex ? 'bg-blue-100' : ''}
-                    ${option.value === value ? 'bg-blue-50 font-semibold' : ''}
+                    ${option.value === value ? 'dropdown-item--selected' : ''}
                   `}
                   onClick={() => handleOptionClick(option.value)}
                   role="option"

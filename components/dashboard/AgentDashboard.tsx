@@ -13,7 +13,7 @@ import NotificationStatusMonitor from './NotificationStatusMonitor';
 import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
 import { ProfitCalculator } from '../../utils/profitCalculator';
 import AnalyticsDashboard from './AnalyticsDashboard';
-import { useLoadingState } from '../../hooks/useLoadingState';
+import { useRobustLoading } from '../../hooks/useRobustLoading';
 import { performanceMonitor } from '../../utils/performanceMonitor';
 
 const ALL_STATUSES: ProjectStatus[] = [
@@ -54,9 +54,11 @@ const AgentDashboard: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [workers, setWorkers] = useState<Profile[]>([]);
     const [selectedWorkers, setSelectedWorkers] = useState<{ [projectId: number]: string }>({});
-    const [loadingState, loadingActions] = useLoadingState({
+    const [loadingState, loadingActions] = useRobustLoading({
         timeout: 20000, // 20 seconds for agent data loading
-        maxRetries: 2
+        maxRetries: 2,
+        preventTabSwitchReload: true,
+        minLoadingTime: 500
     });
     const [showNotificationMonitor, setShowNotificationMonitor] = useState(false);
 

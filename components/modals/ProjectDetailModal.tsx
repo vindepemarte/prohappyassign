@@ -20,7 +20,7 @@ type ModalTab = 'overview' | 'changes' | 'submit' | 'adjust' | 'cancel' | 'deadl
 
 const LoadingSpinner: React.FC = () => (
     <div className="flex justify-center items-center h-full">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="loading-spinner loading-spinner--large"></div>
     </div>
 );
 
@@ -298,7 +298,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                             >
                                 {formStatus === 'submitting' ? (
                                     <div className="flex items-center justify-center space-x-2">
-                                        <div className="loading-spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                        <div className="loading-spinner loading-spinner--small border-white border-t-transparent"></div>
                                         <span>Submitting...</span>
                                     </div>
                                 ) : (
@@ -345,7 +345,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                             >
                                 {formStatus === 'submitting' ? (
                                     <div className="flex items-center justify-center space-x-2">
-                                        <div className="loading-spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                        <div className="loading-spinner loading-spinner--small border-white border-t-transparent"></div>
                                         <span>Submitting...</span>
                                     </div>
                                 ) : (
@@ -378,7 +378,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                     value={cancellationReason}
                                     onChange={(e) => setCancellationReason(e.target.value)}
                                     placeholder="Please explain why you need to cancel this project..."
-                                    className="form-input w-full px-4 py-3 rounded-xl resize-none focus:outline-none"
+                                    className="form-input resize-none"
                                     rows={4}
                                     required
                                 />
@@ -396,7 +396,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                             >
                                 {formStatus === 'submitting' ? (
                                     <div className="flex items-center justify-center space-x-2">
-                                        <div className="loading-spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                        <div className="loading-spinner loading-spinner--small border-white border-t-transparent"></div>
                                         <span>Processing...</span>
                                     </div>
                                 ) : (
@@ -466,7 +466,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                     value={requestedDeadline}
                                     onChange={(e) => setRequestedDeadline(e.target.value)}
                                     min={minDate.toISOString().split('T')[0]}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="form-input"
                                     required
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
@@ -482,7 +482,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                     value={extensionReason}
                                     onChange={(e) => setExtensionReason(e.target.value)}
                                     placeholder="Please explain why you need more time to complete this project..."
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                    className="form-input resize-none"
                                     rows={4}
                                     required
                                 />
@@ -532,7 +532,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                                     value={newDeadline}
                                     onChange={(e) => setNewDeadline(e.target.value)}
                                     min={minDeadlineDate.toISOString().split('T')[0]}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    className="form-input"
                                     required
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
@@ -554,7 +554,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                             >
                                 {formStatus === 'submitting' ? (
                                     <div className="flex items-center justify-center space-x-2">
-                                        <div className="loading-spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                        <div className="loading-spinner loading-spinner--small border-white border-t-transparent"></div>
                                         <span>Submitting...</span>
                                     </div>
                                 ) : (
@@ -600,7 +600,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
 
                 {loading && (
                     <div className="flex justify-center items-center py-20">
-                        <div className="loading-spinner w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                        <div className="loading-spinner loading-spinner--large"></div>
                         <span className="ml-3 text-gray-600">Loading project details...</span>
                     </div>
                 )}

@@ -10,7 +10,7 @@ import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
 import LoadingWrapper from '../common/LoadingWrapper';
 import useFilterState from '../../hooks/useFilterState';
 import { EarningsCalculator, WorkerEarnings } from '../../utils/earningsCalculator';
-import { useLoadingState } from '../../hooks/useLoadingState';
+import { useRobustLoading } from '../../hooks/useRobustLoading';
 import { performanceMonitor } from '../../utils/performanceMonitor';
 
 const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
@@ -40,9 +40,11 @@ const WorkerDashboard: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
     const [earningsLoading, setEarningsLoading] = useState(false);
-    const [loadingState, loadingActions] = useLoadingState({
+    const [loadingState, loadingActions] = useRobustLoading({
         timeout: 15000, // 15 seconds for project loading
-        maxRetries: 2
+        maxRetries: 2,
+        preventTabSwitchReload: true,
+        minLoadingTime: 500
     });
 
     // Filter state management
