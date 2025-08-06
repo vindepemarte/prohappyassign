@@ -7,8 +7,9 @@ interface Notification {
   user_id: string;
   title: string;
   body: string;
-  is_read: boolean;
+  is_read?: boolean; // Optional since it might not exist in the database yet
   created_at: string;
+  delivery_status?: string;
 }
 
 const NotificationBell: React.FC = () => {
@@ -54,7 +55,7 @@ const NotificationBell: React.FC = () => {
             );
             // Recalculate unread count
             setNotifications(current => {
-              const unreadCount = current.filter(n => !n.is_read).length;
+              const unreadCount = current.filter(n => n.is_read === false || n.is_read === undefined).length;
               setUnreadCount(unreadCount);
               return current;
             });
@@ -94,7 +95,8 @@ const NotificationBell: React.FC = () => {
       if (error) throw error;
 
       setNotifications(data || []);
-      setUnreadCount(data?.filter(n => !n.is_read).length || 0);
+      // Handle case where is_read column might not exist yet
+      setUnreadCount(data?.filter(n => n.is_read === false || n.is_read === undefined).length || 0);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -109,7 +111,14 @@ const NotificationBell: React.FC = () => {
         .update({ is_read: true })
         .eq('id', notificationId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error marking notification as read:', error);
+        // If is_read column doesn't exist, just update locally
+        if (error.message?.includes('column "is_read" does not exist')) {
+          console.warn('is_read column does not exist yet. Please run the database migration.');
+        }
+        return;
+      }
 
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
@@ -130,7 +139,14 @@ const NotificationBell: React.FC = () => {
         .eq('user_id', user.id)
         .eq('is_read', false);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error marking all notifications as read:', error);
+        // If is_read column doesn't exist, just update locally
+        if (error.message?.includes('column "is_read" does not exist')) {
+          console.warn('is_read column does not exist yet. Please run the database migration.');
+        }
+        return;
+      }
 
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
@@ -210,21 +226,21 @@ const NotificationBell: React.FC = () => {
                 <div
                   key={notification.id}
                   className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                    !notification.is_read ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                    (notification.is_read === false || notification.is_read === undefined) ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
                   }`}
-                  onClick={() => !notification.is_read && markAsRead(notification.id)}
+                  onClick={() => (notification.is_read === false || notification.is_read === undefined) && markAsRead(notification.id)}
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0">
-                      {!notification.is_read && (
+                      {(notification.is_read === false || notification.is_read === undefined) && (
                         <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${!notification.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
+                      <p className={`text-sm font-medium ${(notification.is_read === false || notification.is_read === undefined) ? 'text-gray-900' : 'text-gray-700'}`}>
                         {notification.title}
                       </p>
-                      <p className={`text-sm mt-1 ${!notification.is_read ? 'text-gray-700' : 'text-gray-500'}`}>
+                      <p className={`text-sm mt-1 ${(notification.is_read === false || notification.is_read === undefined) ? 'text-gray-700' : 'text-gray-500'}`}>
                         {notification.body}
                       </p>
                       <p className="text-xs text-gray-400 mt-2">

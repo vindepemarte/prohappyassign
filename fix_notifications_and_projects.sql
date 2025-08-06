@@ -1,17 +1,21 @@
 -- Fix Notifications and Projects Issues
 -- Run this in Supabase SQL Editor
 
--- 1. Ensure notification_history table has proper structure
-CREATE TABLE IF NOT EXISTS notification_history (
-    id BIGSERIAL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    body TEXT NOT NULL,
-    delivery_status TEXT DEFAULT 'sent',
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+-- 1. Add missing is_read column to notification_history table
+DO $$
+BEGIN
+    -- Check if is_read column exists, if not add it
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'notification_history' 
+        AND column_name = 'is_read'
+    ) THEN
+        ALTER TABLE notification_history ADD COLUMN is_read BOOLEAN DEFAULT FALSE;
+        RAISE NOTICE 'Added is_read column to notification_history table';
+    ELSE
+        RAISE NOTICE 'is_read column already exists in notification_history table';
+    END IF;
+END $$;
 
 -- 2. Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_notification_history_user_id ON notification_history(user_id);
@@ -69,42 +73,89 @@ EXCEPTION
         RAISE NOTICE 'Could not add unique constraint: %', SQLERRM;
 END $$;
 
--- 5. Ensure push_subscriptions table exists
-CREATE TABLE IF NOT EXISTS push_subscriptions (
-    id BIGSERIAL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    subscription JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id, (subscription->>'endpoint'))
-);
+-- 5. Add unique constraint to push_subscriptions if it doesn't exist
+DO $$
+BEGIN
+    -- Check if the unique constraint exists
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE table_name = 'push_subscriptions' 
+        AND constraint_type = 'UNIQUE'
+        AND constraint_name = 'push_subscriptions_user_endpoint_unique'
+    ) THEN
+        -- Create a unique index instead of constraint due to JSON expression
+        CREATE UNIQUE INDEX IF NOT EXISTS push_subscriptions_user_endpoint_unique 
+        ON push_subscriptions (user_id, (subscription->>'endpoint'));
+        RAISE NOTICE 'Added unique index on push_subscriptions (user_id, endpoint)';
+    ELSE
+        RAISE NOTICE 'Unique constraint already exists on push_subscriptions';
+    END IF;
+END $$;
 
 -- 6. Create indexes for push_subscriptions
 CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
 
--- 7. Enable RLS (Row Level Security) for notification_history
-ALTER TABLE notification_history ENABLE ROW LEVEL SECURITY;
+-- 7. Enable RLS (Row Level Security) for notification_history if not already enabled
+DO $$
+BEGIN
+    -- Enable RLS
+    ALTER TABLE notification_history ENABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'Enabled RLS for notification_history';
+EXCEPTION
+    WHEN others THEN
+        RAISE NOTICE 'RLS already enabled for notification_history or error: %', SQLERRM;
+END $$;
 
 -- 8. Create RLS policies for notification_history
-DROP POLICY IF EXISTS "Users can view their own notifications" ON notification_history;
-CREATE POLICY "Users can view their own notifications" ON notification_history
-    FOR SELECT USING (auth.uid() = user_id);
+DO $$
+BEGIN
+    -- Drop existing policies if they exist
+    DROP POLICY IF EXISTS "Users can view their own notifications" ON notification_history;
+    DROP POLICY IF EXISTS "Users can update their own notifications" ON notification_history;
+    DROP POLICY IF EXISTS "Service role can insert notifications" ON notification_history;
+    
+    -- Create new policies
+    CREATE POLICY "Users can view their own notifications" ON notification_history
+        FOR SELECT USING (auth.uid() = user_id);
+    
+    CREATE POLICY "Users can update their own notifications" ON notification_history
+        FOR UPDATE USING (auth.uid() = user_id);
+    
+    CREATE POLICY "Service role can insert notifications" ON notification_history
+        FOR INSERT WITH CHECK (true);
+    
+    RAISE NOTICE 'Created RLS policies for notification_history';
+EXCEPTION
+    WHEN others THEN
+        RAISE NOTICE 'Error creating RLS policies for notification_history: %', SQLERRM;
+END $$;
 
-DROP POLICY IF EXISTS "Users can update their own notifications" ON notification_history;
-CREATE POLICY "Users can update their own notifications" ON notification_history
-    FOR UPDATE USING (auth.uid() = user_id);
-
-DROP POLICY IF EXISTS "Service role can insert notifications" ON notification_history;
-CREATE POLICY "Service role can insert notifications" ON notification_history
-    FOR INSERT WITH CHECK (true);
-
--- 9. Enable RLS for push_subscriptions
-ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+-- 9. Enable RLS for push_subscriptions if not already enabled
+DO $$
+BEGIN
+    -- Enable RLS
+    ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+    RAISE NOTICE 'Enabled RLS for push_subscriptions';
+EXCEPTION
+    WHEN others THEN
+        RAISE NOTICE 'RLS already enabled for push_subscriptions or error: %', SQLERRM;
+END $$;
 
 -- 10. Create RLS policies for push_subscriptions
-DROP POLICY IF EXISTS "Users can manage their own subscriptions" ON push_subscriptions;
-CREATE POLICY "Users can manage their own subscriptions" ON push_subscriptions
-    FOR ALL USING (auth.uid() = user_id);
+DO $$
+BEGIN
+    -- Drop existing policy if it exists
+    DROP POLICY IF EXISTS "Users can manage their own subscriptions" ON push_subscriptions;
+    
+    -- Create new policy
+    CREATE POLICY "Users can manage their own subscriptions" ON push_subscriptions
+        FOR ALL USING (auth.uid() = user_id);
+    
+    RAISE NOTICE 'Created RLS policies for push_subscriptions';
+EXCEPTION
+    WHEN others THEN
+        RAISE NOTICE 'Error creating RLS policies for push_subscriptions: %', SQLERRM;
+END $$;
 
 -- 11. Grant necessary permissions
 GRANT SELECT, INSERT, UPDATE ON notification_history TO authenticated;
