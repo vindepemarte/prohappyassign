@@ -15,7 +15,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ProHappy" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS - Using design system instead of CDN for production -->
+    <style>
+      /* Production-ready Tailwind alternative using our design system */
+      @import url('/styles/design-system.css');
+    </style>
   <script type="importmap">
 {
   "imports": {

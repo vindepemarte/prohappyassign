@@ -7,6 +7,9 @@ import { Project, ProjectStatus, Profile } from '../../types';
 import { WORKER_PAY_RATE_PER_500_WORDS } from '../../constants';
 import Button from '../Button';
 import Select from '../common/Select';
+import ModernStatusSelector from '../common/ModernStatusSelector';
+import ModernSearchField from '../common/ModernSearchField';
+import AgentBroadcastNotifications from './AgentBroadcastNotifications';
 import LoadingWrapper from '../common/LoadingWrapper';
 import AgentNotificationSender from './AgentNotificationSender';
 import NotificationStatusMonitor from './NotificationStatusMonitor';
@@ -30,6 +33,22 @@ const ALL_STATUSES: ProjectStatus[] = [
     'refund',
     'cancelled'
 ];
+
+const getStatusDescription = (status: ProjectStatus): string => {
+    const descriptions: Record<ProjectStatus, string> = {
+        'pending_payment_approval': 'Waiting for client payment confirmation',
+        'rejected_payment': 'Payment was rejected and needs review',
+        'awaiting_worker_assignment': 'Ready to be assigned to a worker',
+        'in_progress': 'Currently being worked on by assigned worker',
+        'pending_quote_approval': 'Waiting for client to approve quote changes',
+        'needs_changes': 'Client has requested modifications',
+        'pending_final_approval': 'Waiting for final client approval',
+        'completed': 'Project has been successfully completed',
+        'refund': 'Project cancelled and requires refund processing',
+        'cancelled': 'Project has been cancelled'
+    };
+    return descriptions[status] || '';
+};
 
 const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
     const statusStyles: Record<ProjectStatus, string> = {
@@ -226,10 +245,7 @@ const AgentDashboard: React.FC = () => {
         updateFilteredData(projects, filter);
     };
 
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchTerm(e.target.value);
-        updateFilteredData(projects, currentFilter);
-    };
+
 
     const handleClientIdChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedClientId(e.target.value);
@@ -371,17 +387,15 @@ const AgentDashboard: React.FC = () => {
             {viewMode === 'docs' && (
                 <div className="mb-6 bg-white rounded-lg shadow-sm border p-4">
                     <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
-                        {/* Search by Order Reference */}
+                        {/* Modern Search Field */}
                         <div className="flex-1 min-w-0">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Search by Order Reference or Client Name
+                            <label className="block text-sm font-semibold text-gray-900 mb-3">
+                                Search Projects
                             </label>
-                            <input
-                                type="text"
+                            <ModernSearchField
+                                placeholder="Search by order reference or client name"
                                 value={searchTerm}
-                                onChange={handleSearchChange}
-                                placeholder="Enter order reference or client name..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                onChange={setSearchTerm}
                             />
                         </div>
 
@@ -436,8 +450,9 @@ const AgentDashboard: React.FC = () => {
                 </div>
             )}
 
+            {/* Agent Broadcast Notifications */}
             <div className="mb-8">
-                <AgentNotificationSender />
+                <AgentBroadcastNotifications />
             </div>
 
             {/* Push Notification Tester */}
@@ -587,13 +602,13 @@ const AgentDashboard: React.FC = () => {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <Select
-                                                        label="Update Status:"
-                                                        value={project.status}
-                                                        onChange={(value) => handleStatusChange(project.id, value as ProjectStatus)}
+                                                    <ModernStatusSelector
+                                                        currentStatus={project.status}
+                                                        onStatusChange={(status) => handleStatusChange(project.id, status)}
                                                         options={ALL_STATUSES.map(status => ({
                                                             value: status,
-                                                            label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                                                            label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                                                            description: getStatusDescription(status)
                                                         }))}
                                                     />
                                                 </div>

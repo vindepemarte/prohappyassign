@@ -7,6 +7,7 @@ import { PRICING_TABLE } from '../constants';
 import { sendNotification } from './notificationService';
 import { PricingCalculator } from './pricingCalculator';
 import { OrderReferenceGenerator } from './orderReferenceGenerator';
+import WorkflowNotificationService from './workflowNotificationService';
 import { queryOptimizer } from '../utils/queryOptimizer';
 import { projectCache, userCache } from '../utils/cacheManager';
 
@@ -224,14 +225,16 @@ export const createNewProject = async (data: NewProjectFormData, userId: string)
         throw new Error('Failed to save project files. Please try again.');
     }
 
-    // 6. Notify agents of new project
-    fireAndForgetNotification(sendNotification({
-        target: { role: 'agent' },
-        payload: {
-            title: 'New Assignment Submitted',
-            body: `Project "${data.title}" has been submitted for approval.`
-        }
-    }));
+    // 6. Notify agents of new project submission (C -> A)
+    try {
+        await WorkflowNotificationService.notifyNewProjectSubmission(
+            projectId,
+            userId,
+            data.title
+        );
+    } catch (error) {
+        console.error('Failed to send new project notification:', error);
+    }
 };
 
 /**
@@ -433,18 +436,89 @@ export const updateProjectStatus = async (projectId: number, status: ProjectStat
     projectCache.clear();
     queryOptimizer.invalidateCache('projects');
     
-    // Send notification on completion
-    if (status === 'completed') {
-        const { clientId } = await getProjectParticipantIds(projectId);
-        if (clientId) {
-            fireAndForgetNotification(sendNotification({
-                target: { userIds: [clientId] },
-                payload: {
-                    title: 'Project Completed!',
-                    body: `Your project #${projectId} has been marked as completed.`
+    // Send workflow notifications based on status change
+    await sendWorkflowNotifications(projectId, currentProject.status, status);
+};
+
+/**
+ * Send appropriate workflow notifications based on status change
+ */
+const sendWorkflowNotifications = async (
+    projectId: number, 
+    oldStatus: ProjectStatus, 
+    newStatus: ProjectStatus
+): Promise<void> => {
+    try {
+        // Get project details for notifications
+        const { data: project } = await supabase
+            .from('projects')
+            .select('title, client_id, worker_id, agent_id, adjustment_type')
+            .eq('id', projectId)
+            .single();
+
+        if (!project) return;
+
+        const { title, client_id, worker_id, agent_id, adjustment_type } = project;
+
+        // Handle different status transitions
+        switch (newStatus) {
+            case 'pending_final_approval':
+                // W -> A: Worker completed project
+                if (worker_id) {
+                    await WorkflowNotificationService.notifyProjectCompletedByWorker(
+                        projectId, worker_id, title
+                    );
                 }
-            }));
+                break;
+
+            case 'in_progress':
+                // C -> W: Client accepted adjustment
+                if (oldStatus === 'pending_quote_approval' && worker_id && adjustment_type) {
+                    await WorkflowNotificationService.notifyAdjustmentAccepted(
+                        projectId, worker_id, client_id, title, adjustment_type
+                    );
+                }
+                break;
+
+            case 'cancelled':
+                // C -> W: Client rejected adjustment
+                if (oldStatus === 'pending_quote_approval' && worker_id && adjustment_type) {
+                    await WorkflowNotificationService.notifyAdjustmentRejected(
+                        projectId, worker_id, client_id, title, adjustment_type
+                    );
+                }
+                break;
+
+            case 'needs_changes':
+                // C -> W: Client requested changes
+                if (worker_id) {
+                    await WorkflowNotificationService.notifyChangesRequested(
+                        projectId, worker_id, client_id, title
+                    );
+                }
+                break;
+
+            case 'refund':
+                // A -> All: Agent set refund
+                if (agent_id) {
+                    await WorkflowNotificationService.notifyProjectRefund(
+                        projectId, agent_id, title, client_id, worker_id
+                    );
+                }
+                break;
+
+            case 'completed':
+                // A -> All: Agent marked as completed
+                if (agent_id) {
+                    await WorkflowNotificationService.notifyProjectCompleted(
+                        projectId, agent_id, title, client_id, worker_id
+                    );
+                }
+                break;
         }
+    } catch (error) {
+        console.error('Error sending workflow notifications:', error);
+        // Don't fail the status update if notifications fail
     }
 };
 
@@ -575,18 +649,25 @@ export const assignWorkerToProject = async (projectId: number, workerId: string)
     projectCache.clear();
     queryOptimizer.invalidateCache('projects');
     
-    // Notify the assigned worker (with error handling)
-    try {
-        fireAndForgetNotification(sendNotification({
-            target: { userIds: [workerId] },
-            payload: {
-                title: 'You have a new assignment!',
-                body: `You have been assigned to project #${projectId}.`
-            }
-        }));
-    } catch (notificationError) {
-        console.warn('Failed to send assignment notification:', notificationError);
-        // Don't fail the assignment if notification fails
+    // Get project details for notification
+    const { data: project } = await supabase
+        .from('projects')
+        .select('title, agent_id')
+        .eq('id', projectId)
+        .single();
+
+    // Notify the assigned worker (A -> W)
+    if (project) {
+        try {
+            await WorkflowNotificationService.notifyProjectAssignedToWorker(
+                projectId,
+                workerId,
+                project.agent_id || '',
+                project.title
+            );
+        } catch (notificationError) {
+            console.warn('Failed to send assignment notification:', notificationError);
+        }
     }
 };
 
