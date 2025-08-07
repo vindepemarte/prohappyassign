@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ProjectStatus } from '../../types';
+import { getStatusColors, getStatusDisplayName } from '../../utils/statusColors';
 
 interface StatusOption {
   value: ProjectStatus;
@@ -117,31 +118,41 @@ const ModernStatusSelector: React.FC<ModernStatusSelectorProps> = ({
               {options.map((option, index) => {
                 const isSelected = option.value === selectedStatus;
                 const isLast = index === options.length - 1;
+                const colors = getStatusColors(option.value);
                 
                 return (
                   <div
                     key={option.value}
                     className={`
-                      px-6 py-4 cursor-pointer transition-colors hover:bg-gray-50
+                      px-6 py-4 cursor-pointer transition-all duration-200
                       ${!isLast ? 'border-b border-gray-100' : ''}
-                      ${isSelected ? 'bg-blue-50' : ''}
+                      ${isSelected 
+                        ? `${colors.background} ${colors.border} border-l-4` 
+                        : 'hover:bg-gray-50'
+                      }
                     `}
                     onClick={() => handleStatusSelect(option.value)}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <p className={`text-sm font-semibold ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
-                          {option.label}
-                        </p>
-                        {option.description && (
-                          <p className={`text-sm mt-1 ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>
-                            {option.description}
-                          </p>
-                        )}
+                        <div className="flex items-center space-x-3">
+                          {/* Status Color Indicator */}
+                          <div className={`w-3 h-3 rounded-full ${colors.badge.split(' ')[0]}`}></div>
+                          <div>
+                            <p className={`text-sm font-semibold ${isSelected ? colors.text : 'text-gray-900'}`}>
+                              {getStatusDisplayName(option.value)}
+                            </p>
+                            {(option.description || colors.description) && (
+                              <p className={`text-xs mt-1 ${isSelected ? colors.text : 'text-gray-600'}`}>
+                                {option.description || colors.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       {isSelected && (
                         <div className="ml-3">
-                          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${colors.badge.split(' ')[0]}`}>
                             <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>

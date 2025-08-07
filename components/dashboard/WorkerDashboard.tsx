@@ -8,31 +8,14 @@ import Button from '../Button';
 import ProjectDetailModal from '../modals/ProjectDetailModal';
 import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
 import LoadingWrapper from '../common/LoadingWrapper';
+import ProjectCard from '../common/ProjectCard';
+import StatusBadge from '../common/StatusBadge';
 import useFilterState from '../../hooks/useFilterState';
 import { EarningsCalculator, WorkerEarnings } from '../../utils/earningsCalculator';
 import { useRobustLoading } from '../../hooks/useRobustLoading';
 import { performanceMonitor } from '../../utils/performanceMonitor';
 
-const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
-    const statusStyles: Record<ProjectStatus, string> = {
-        pending_payment_approval: 'bg-orange-100 text-orange-800',
-        rejected_payment: 'bg-red-100 text-red-800',
-        awaiting_worker_assignment: 'bg-cyan-100 text-cyan-800',
-        in_progress: 'bg-blue-100 text-blue-800',
-        pending_quote_approval: 'bg-purple-100 text-purple-800',
-        needs_changes: 'bg-yellow-100 text-yellow-800',
-        pending_final_approval: 'bg-indigo-100 text-indigo-800',
-        completed: 'bg-green-100 text-green-800',
-        refund: 'bg-red-100 text-red-800',
-        cancelled: 'bg-gray-100 text-gray-800',
-    };
-    const formattedStatus = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    return (
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusStyles[status]}`}>
-            {formattedStatus}
-        </span>
-    );
-};
+// StatusBadge component moved to components/common/StatusBadge.tsx
 
 const WorkerDashboard: React.FC = () => {
     const { user } = useAuth();
@@ -223,25 +206,13 @@ const WorkerDashboard: React.FC = () => {
                             const currentWordCount = project.adjusted_word_count || project.initial_word_count;
                             const isCompleted = project.status === 'completed';
                             return (
-                                <div key={project.id} className="border p-4 rounded-xl bg-slate-50 hover:shadow-md transition-shadow">
-                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center">
-                                        <div>
-                                            <p className="font-bold text-lg text-[#4A90E2]">{project.title}</p>
-                                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                                                <p className="text-sm text-gray-500">
-                                                    Assigned on: {new Date(project.updated_at).toLocaleDateString()}
-                                                </p>
-                                                {project.order_reference && (
-                                                    <p className="text-sm text-gray-600">
-                                                        <span className="font-mono font-semibold text-blue-600">{project.order_reference}</span>
-                                                    </p>
-                                                )}
-                                            </div>
+                                <ProjectCard key={project.id} project={project}>
+                                    <div className="p-4 space-y-3">
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                                            <p className="text-sm text-gray-500">
+                                                Assigned on: {new Date(project.updated_at).toLocaleDateString()}
+                                            </p>
                                         </div>
-                                        <div className="mt-2 sm:mt-0 text-left sm:text-right">
-                                            <StatusBadge status={project.status} />
-                                        </div>
-                                    </div>
                                     <div className="mt-4 border-t pt-3 text-sm text-gray-600 grid grid-cols-2 gap-2">
                                         <p><strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}</p>
                                         <p><strong>Word Count:</strong> {currentWordCount.toLocaleString()}</p>
@@ -269,7 +240,7 @@ const WorkerDashboard: React.FC = () => {
                                             View Details &amp; Actions
                                         </Button>
                                     </div>
-                                </div>
+                                </ProjectCard>
                             )
                         })}
 

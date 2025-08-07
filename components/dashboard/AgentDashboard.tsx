@@ -12,6 +12,9 @@ import ModernSearchField from '../common/ModernSearchField';
 import AgentBroadcastNotifications from './AgentBroadcastNotifications';
 import ManualUpdateButton from '../common/ManualUpdateButton';
 import LoadingWrapper from '../common/LoadingWrapper';
+import ProjectCard from '../common/ProjectCard';
+import StatusBadge from '../common/StatusBadge';
+import { getStatusColors } from '../../utils/statusColors';
 
 import NotificationStatusMonitor from './NotificationStatusMonitor';
 import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
@@ -50,26 +53,7 @@ const getStatusDescription = (status: ProjectStatus): string => {
     return descriptions[status] || '';
 };
 
-const StatusBadge: React.FC<{ status: ProjectStatus }> = ({ status }) => {
-    const statusStyles: Record<ProjectStatus, string> = {
-        pending_payment_approval: 'bg-orange-100 text-orange-800',
-        rejected_payment: 'bg-red-100 text-red-800',
-        awaiting_worker_assignment: 'bg-cyan-100 text-cyan-800',
-        in_progress: 'bg-blue-100 text-blue-800',
-        pending_quote_approval: 'bg-purple-100 text-purple-800',
-        needs_changes: 'bg-yellow-100 text-yellow-800',
-        pending_final_approval: 'bg-indigo-100 text-indigo-800',
-        completed: 'bg-green-100 text-green-800',
-        refund: 'bg-red-100 text-red-800',
-        cancelled: 'bg-gray-100 text-gray-800',
-    };
-    const formattedStatus = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    return (
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${statusStyles[status]}`}>
-            {formattedStatus}
-        </span>
-    );
-};
+// StatusBadge component moved to components/common/StatusBadge.tsx
 
 const AgentDashboard: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -501,13 +485,9 @@ const AgentDashboard: React.FC = () => {
                                     const profit = project.cost_gbp - workerPayout;
 
                                     return (
-                                        <div key={project.id} className={`border rounded-xl bg-slate-50 shadow-md transition-shadow flex flex-col ${project.status === 'pending_quote_approval' ? 'border-2 border-purple-400' : ''}`}>
-                                            <div className="p-4 bg-white rounded-t-xl">
-                                                <div className="flex justify-between items-start">
-                                                    <p className="font-bold text-lg text-[#4A90E2] break-all">{project.title}</p>
-                                                    <StatusBadge status={project.status} />
-                                                </div>
-                                                <div className="flex items-center gap-2 mt-1">
+                                        <ProjectCard key={project.id} project={project}>
+                                            <div className="p-4 space-y-2 text-sm text-gray-700 flex-grow">
+                                                <div className="flex items-center gap-2">
                                                     <p className="text-xs text-gray-500">
                                                         Client: {clientNames[project.client_id] || project.client_id.substring(0, 8) + '...'}
                                                     </p>
@@ -521,14 +501,7 @@ const AgentDashboard: React.FC = () => {
                                                         </svg>
                                                     </button>
                                                 </div>
-                                                {project.order_reference && (
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        Order: <span className="font-mono font-semibold text-blue-600">{project.order_reference}</span>
-                                                    </p>
-                                                )}
-                                            </div>
 
-                                            <div className="p-4 border-t space-y-2 text-sm text-gray-700 flex-grow">
                                                 <p><strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}</p>
                                                 <p><strong>Word Count:</strong> {currentWordCount.toLocaleString()} {project.adjusted_word_count ? <span className="text-purple-600">(Adjusted)</span> : ''}</p>
                                                 <div className="mt-2 pt-2 border-t">
@@ -593,7 +566,7 @@ const AgentDashboard: React.FC = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                        </div>
+                                        </ProjectCard>
                                     )
                                 })}
                             </div>
