@@ -354,6 +354,27 @@ export class WorkflowNotificationService {
       }
     );
   }
+
+  /**
+   * Send notification to specific user
+   */
+  static async sendNotificationToSpecificUser(
+    userId: string,
+    title: string,
+    body: string,
+    agentId: string
+  ): Promise<void> {
+    await this.sendNotification(
+      {
+        title: `📢 ${title}`,
+        body
+      },
+      {
+        userIds: [userId],
+        excludeUserId: agentId
+      }
+    );
+  }
 }
 
 export default WorkflowNotificationService;

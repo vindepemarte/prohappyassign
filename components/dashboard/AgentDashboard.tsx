@@ -10,10 +10,10 @@ import Select from '../common/Select';
 import ModernStatusSelector from '../common/ModernStatusSelector';
 import ModernSearchField from '../common/ModernSearchField';
 import AgentBroadcastNotifications from './AgentBroadcastNotifications';
+import ManualUpdateButton from '../common/ManualUpdateButton';
 import LoadingWrapper from '../common/LoadingWrapper';
 
 import NotificationStatusMonitor from './NotificationStatusMonitor';
-import PushNotificationTester from '../debug/PushNotificationTester';
 import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
 import { ProfitCalculator } from '../../utils/profitCalculator';
 import AnalyticsDashboard from './AnalyticsDashboard';
@@ -81,7 +81,7 @@ const AgentDashboard: React.FC = () => {
         preventTabSwitchReload: true,
         minLoadingTime: 500
     });
-    const [showNotificationMonitor, setShowNotificationMonitor] = useState(false);
+
 
     // Filter and profit tracking state
     const [currentFilter, setCurrentFilter] = useState<TimeFilter>({ type: 'month' });
@@ -440,37 +440,12 @@ const AgentDashboard: React.FC = () => {
                 <AgentBroadcastNotifications />
             </div>
 
-            {/* Push Notification Tester */}
+            {/* Manual Update Controls */}
             <div className="mb-8">
-                <PushNotificationTester />
+                <ManualUpdateButton />
             </div>
 
-            {/* Notification Status Monitor */}
-            <div className="mb-8">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-gray-800">System Monitoring</h2>
-                    <button
-                        onClick={() => setShowNotificationMonitor(!showNotificationMonitor)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        <svg
-                            className={`w-4 h-4 transform transition-transform ${showNotificationMonitor ? 'rotate-180' : ''}`}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                        <span>{showNotificationMonitor ? 'Hide' : 'Show'} Notification Monitor</span>
-                    </button>
-                </div>
 
-                {showNotificationMonitor && (
-                    <div className="mb-6">
-                        <NotificationStatusMonitor />
-                    </div>
-                )}
-            </div>
 
             {/* View Toggle */}
             <div className="flex items-center justify-between mb-6 border-t pt-6">

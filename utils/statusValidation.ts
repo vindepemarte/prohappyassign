@@ -4,34 +4,59 @@ import { ProjectStatus, UserRole } from '../types';
  * Defines valid status transitions for projects
  */
 const STATUS_TRANSITIONS: Record<ProjectStatus, ProjectStatus[]> = {
+  // C -> A: Client submits project
   pending_payment_approval: ['rejected_payment', 'awaiting_worker_assignment'],
-  rejected_payment: ['pending_payment_approval', 'awaiting_worker_assignment'], // Allow agents to approve after rejection
-  awaiting_worker_assignment: ['in_progress', 'rejected_payment'], // Allow rejection at any stage
-  in_progress: ['needs_changes', 'pending_final_approval', 'refund', 'awaiting_worker_assignment'], // Allow reassignment
-  pending_quote_approval: ['in_progress', 'rejected_payment', 'awaiting_worker_assignment'],
+  
+  // A -> C: Agent rejects payment
+  rejected_payment: ['pending_payment_approval', 'awaiting_worker_assignment'],
+  
+  // A -> W: Agent approves payment and assigns worker
+  awaiting_worker_assignment: ['in_progress', 'rejected_payment'],
+  
+  // W -> A: Worker works on project, can request adjustments or submit for approval
+  in_progress: ['pending_final_approval', 'pending_quote_approval', 'needs_changes', 'refund', 'awaiting_worker_assignment'],
+  
+  // W -> C: Worker requests word count or deadline adjustment
+  pending_quote_approval: ['in_progress', 'cancelled', 'awaiting_worker_assignment'],
+  
+  // C -> W: Client requests changes
   needs_changes: ['in_progress', 'refund', 'awaiting_worker_assignment'],
+  
+  // W -> A: Worker submits completed work
   pending_final_approval: ['completed', 'needs_changes', 'refund', 'in_progress'],
-  completed: ['needs_changes'], // Allow reopening if needed
-  refund: ['cancelled'], // Can only transition to cancelled after refund processing
-  cancelled: [], // Terminal state - no transitions allowed
+  
+  // A -> All: Agent marks as completed
+  completed: ['needs_changes', 'refund'], // Allow reopening if needed
+  
+  // A -> All: Agent processes refund
+  refund: ['cancelled'],
+  
+  // Terminal state
+  cancelled: []
 };
 
 /**
  * Defines which user roles can transition to which statuses
  */
 const ROLE_STATUS_PERMISSIONS: Record<UserRole, ProjectStatus[]> = {
-  client: ['pending_payment_approval', 'rejected_payment'],
-  worker: ['pending_final_approval', 'pending_quote_approval', 'refund'],
+  // Client permissions: can approve/reject payments, request changes, accept/reject adjustments
+  client: ['pending_payment_approval', 'rejected_payment', 'needs_changes', 'cancelled', 'in_progress'],
+  
+  // Worker permissions: can submit work, request adjustments
+  worker: ['pending_final_approval', 'pending_quote_approval', 'in_progress'],
+  
+  // Agent permissions: can manage all statuses
   agent: [
     'pending_payment_approval',
-    'awaiting_worker_assignment',
+    'awaiting_worker_assignment', 
     'in_progress',
     'needs_changes',
     'completed',
     'cancelled',
     'rejected_payment',
     'pending_quote_approval',
-    'pending_final_approval'
+    'pending_final_approval',
+    'refund'
   ],
 };
 

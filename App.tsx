@@ -6,6 +6,8 @@ import Logo from './components/Logo';
 import { initializeOrderReferences } from './services/initializeOrderReferences';
 import { initializeNotificationSystem } from './services/notificationTracker';
 import { performanceMonitor } from './utils/performanceMonitor';
+import AppUpdateService from './services/appUpdateService';
+import UpdateNotification from './components/common/UpdateNotification';
 
 const App: React.FC = () => {
   const { session, loading } = useAuth();
@@ -16,6 +18,9 @@ const App: React.FC = () => {
       try {
         // Initialize performance monitoring immediately
         performanceMonitor.initialize();
+        
+        // Initialize app update service
+        AppUpdateService.initialize();
         
         if (session) {
           // Initialize services with error handling
@@ -50,7 +55,12 @@ const App: React.FC = () => {
   }
 
   // Show dashboard immediately if session exists, no loading screen
-  return <Dashboard />;
+  return (
+    <>
+      <Dashboard />
+      <UpdateNotification />
+    </>
+  );
 };
 
 export default App;

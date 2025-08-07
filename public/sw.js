@@ -115,3 +115,10 @@ self.addEventListener('notificationclick', event => {
     clients.openWindow('/')
   );
 });
+
+// Handle messages from the app (for updates)
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
