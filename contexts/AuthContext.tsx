@@ -59,12 +59,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           setProfile(userProfile);
           
-          // Subscribe user to push notifications asynchronously
-          subscribeUser(session.user.id).then(() => {
-            console.log('User subscribed to push notifications');
-          }).catch((subscriptionError) => {
-            console.warn('Failed to subscribe user to push notifications:', subscriptionError);
-          });
+          // Don't auto-subscribe to push notifications - let user choose
+          console.log('User authenticated, push notifications available for manual subscription');
         } else {
           setProfile(null);
         }
