@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS notification_history (
     retry_count INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     delivered_at TIMESTAMP WITH TIME ZONE,
-    error_message TEXT
+    error_message TEXT,
+    is_read BOOLEAN DEFAULT FALSE
 );
 
 -- 5. Create indexes for better performance
@@ -58,10 +59,19 @@ CREATE TRIGGER update_deadline_extension_requests_updated_at
     BEFORE UPDATE ON deadline_extension_requests 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- 7. Add constraint to ensure urgency_level has valid values
-ALTER TABLE projects 
-ADD CONSTRAINT IF NOT EXISTS check_urgency_level 
-CHECK (urgency_level IN ('normal', 'moderate', 'urgent', 'rush'));
+-- 7. Add constraint to ensure urgency_level has valid values (only if it doesn't exist)
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints 
+        WHERE constraint_name = 'check_urgency_level' 
+        AND table_name = 'projects'
+    ) THEN
+        ALTER TABLE projects 
+        ADD CONSTRAINT check_urgency_level 
+        CHECK (urgency_level IN ('normal', 'moderate', 'urgent', 'rush'));
+    END IF;
+END $$;
 
 -- 8. Update existing projects to have order references (will be handled by the utility function)
 -- This will be populated by the OrderReferenceGenerator utility when the application starts
@@ -72,8 +82,8 @@ COMMENT ON COLUMN projects.deadline_charge IS 'Additional charge based on deadli
 COMMENT ON COLUMN projects.urgency_level IS 'Urgency level based on deadline: normal, moderate, urgent, rush';
 COMMENT ON TABLE deadline_extension_requests IS 'Worker requests for deadline extensions';
 COMMENT ON TABLE notification_history IS 'Tracking table for notification delivery and retry attempts';
--- 10. C
-reate SQL function for incrementing notification retry count
+
+-- 10. Create SQL function for incrementing notification retry count
 CREATE OR REPLACE FUNCTION increment_notification_retry(notification_id INTEGER)
 RETURNS VOID AS $$
 BEGIN
@@ -82,3 +92,21 @@ BEGIN
     WHERE id = notification_id;
 END;
 $$ LANGUAGE plpgsql;
+
+-- 11. Add adjustment_type column to projects table for tracking adjustment types
+ALTER TABLE projects 
+ADD COLUMN IF NOT EXISTS adjustment_type VARCHAR(20) CHECK (adjustment_type IN ('word_count', 'deadline'));
+
+-- 12. Create project_notes table for additional project information
+CREATE TABLE IF NOT EXISTS project_notes (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    note TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_project_notes_project_id ON project_notes(project_id);
+CREATE INDEX IF NOT EXISTS idx_project_notes_author_id ON project_notes(author_id);
+
+COMMENT ON TABLE project_notes IS 'Additional notes and comments for projects';
