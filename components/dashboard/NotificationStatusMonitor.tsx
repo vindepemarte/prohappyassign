@@ -1,11 +1,13 @@
 /**
  * Notification Status Monitoring Dashboard Component
  * Displays real-time notification delivery status and queue information
+ * Now includes broadcast notifications monitoring
  */
 
 import React, { useState, useEffect } from 'react';
 import { getNotificationQueueStatus } from '../../services/notificationService';
 import { NotificationTracker, getRetryQueueStatus } from '../../services/notificationTracker';
+import { supabase } from '../../services/supabase';
 
 interface NotificationStats {
   total: number;
@@ -13,6 +15,8 @@ interface NotificationStats {
   failed: number;
   pending: number;
   deliveryRate: number;
+  broadcast: number;
+  workflow: number;
 }
 
 interface QueueStatus {
@@ -32,7 +36,9 @@ export const NotificationStatusMonitor: React.FC = () => {
     delivered: 0,
     failed: 0,
     pending: 0,
-    deliveryRate: 0
+    deliveryRate: 0,
+    broadcast: 0,
+    workflow: 0
   });
   
   const [queueStatus, setQueueStatus] = useState<QueueStatus>({
@@ -72,7 +78,23 @@ export const NotificationStatusMonitor: React.FC = () => {
 
         // Fetch notification statistics
         const notificationStats = await NotificationTracker.getNotificationStats(startDate, now);
-        setStats(notificationStats);
+        
+        // Fetch broadcast notification stats from database
+        const { data: broadcastStats } = await supabase
+          .from('notification_history')
+          .select('title')
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', now.toISOString())
+          .like('title', '📢%'); // Broadcast notifications start with 📢
+        
+        const broadcastCount = broadcastStats?.length || 0;
+        const workflowCount = notificationStats.total - broadcastCount;
+        
+        setStats({
+          ...notificationStats,
+          broadcast: broadcastCount,
+          workflow: workflowCount
+        });
 
         // Get queue status
         const currentQueueStatus = getNotificationQueueStatus();
@@ -185,6 +207,19 @@ export const NotificationStatusMonitor: React.FC = () => {
           <div className="bg-yellow-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
             <div className="text-sm text-gray-600">Pending</div>
+          </div>
+        </div>
+
+        {/* Notification Type Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-purple-50 rounded-lg p-4">
+            <div className="text-2xl font-bold text-purple-600">{stats.broadcast}</div>
+            <div className="text-sm text-gray-600">📢 Broadcast Notifications</div>
+          </div>
+          
+          <div className="bg-blue-50 rounded-lg p-4">
+            <div className="text-2xl font-bold text-blue-600">{stats.workflow}</div>
+            <div className="text-sm text-gray-600">🔄 Workflow Notifications</div>
           </div>
         </div>
 

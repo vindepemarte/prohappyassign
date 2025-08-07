@@ -22,22 +22,26 @@ const ModernStatusSelector: React.FC<ModernStatusSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState(currentStatus);
-  const selectorRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (selectorRef.current && !selectorRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   const handleStatusSelect = (status: ProjectStatus) => {
     setSelectedStatus(status);
-    onStatusChange(status);
+  };
+
+  const handleDone = () => {
+    onStatusChange(selectedStatus);
     setIsOpen(false);
   };
 
@@ -64,67 +68,105 @@ const ModernStatusSelector: React.FC<ModernStatusSelectorProps> = ({
   }
 
   return (
-    <div className="relative" ref={selectorRef}>
-      {/* Header */}
-      <div className="mb-4">
-        <h3 className="text-lg font-bold text-gray-900">Update Status</h3>
-        <p className="text-sm text-gray-600 mt-1">
-          Select the new status for this project
-        </p>
-      </div>
-
-      {/* Status Options */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        {options.map((option, index) => {
-          const isSelected = option.value === currentStatus;
-          const isLast = index === options.length - 1;
-          
-          return (
-            <div
-              key={option.value}
-              className={`
-                px-6 py-4 cursor-pointer transition-colors hover:bg-gray-50
-                ${!isLast ? 'border-b border-gray-100' : ''}
-                ${isSelected ? 'bg-blue-50' : ''}
-              `}
-              onClick={() => handleStatusSelect(option.value)}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className={`text-sm font-semibold ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
-                    {option.label}
-                  </p>
-                  {option.description && (
-                    <p className={`text-sm mt-1 ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>
-                      {option.description}
-                    </p>
-                  )}
-                </div>
-                {isSelected && (
-                  <div className="ml-3">
-                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Action Button */}
-      <div className="mt-6">
+    <>
+      {/* Trigger Button */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Update Status:</label>
         <button
-          onClick={() => setIsOpen(false)}
-          className="w-full bg-gray-900 text-white py-4 px-6 rounded-2xl font-semibold text-sm hover:bg-gray-800 transition-colors"
+          onClick={() => setIsOpen(true)}
+          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-left hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
         >
-          Done
+          <div className="flex items-center justify-between">
+            <span className="text-gray-900">{currentOption?.label || currentStatus}</span>
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </button>
       </div>
-    </div>
+
+      {/* Modal Popup */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div 
+            ref={modalRef}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden"
+          >
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Update Status</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Select the new status for this project
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Status Options */}
+            <div className="max-h-96 overflow-y-auto">
+              {options.map((option, index) => {
+                const isSelected = option.value === selectedStatus;
+                const isLast = index === options.length - 1;
+                
+                return (
+                  <div
+                    key={option.value}
+                    className={`
+                      px-6 py-4 cursor-pointer transition-colors hover:bg-gray-50
+                      ${!isLast ? 'border-b border-gray-100' : ''}
+                      ${isSelected ? 'bg-blue-50' : ''}
+                    `}
+                    onClick={() => handleStatusSelect(option.value)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <p className={`text-sm font-semibold ${isSelected ? 'text-blue-900' : 'text-gray-900'}`}>
+                          {option.label}
+                        </p>
+                        {option.description && (
+                          <p className={`text-sm mt-1 ${isSelected ? 'text-blue-700' : 'text-gray-600'}`}>
+                            {option.description}
+                          </p>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <div className="ml-3">
+                          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Action Button */}
+            <div className="px-6 py-4 border-t border-gray-200">
+              <button
+                onClick={handleDone}
+                className="w-full bg-gray-900 text-white py-3 px-6 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };
 

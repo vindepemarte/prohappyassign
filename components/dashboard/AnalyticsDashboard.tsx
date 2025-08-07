@@ -3,6 +3,7 @@ import { Project } from '../../types';
 import { TimeFilter } from '../common/FilterBar';
 import { ProfitCalculator } from '../../utils/profitCalculator';
 import { queryOptimizer } from '../../utils/queryOptimizer';
+import { supabase } from '../../services/supabase';
 // Removed unused imports - LoadingWrapper and useLoadingState
 
 interface AnalyticsDashboardProps {
@@ -22,6 +23,31 @@ interface MonthlyData {
 }
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ projects, timeFilter }) => {
+  const [clientNames, setClientNames] = useState<Record<string, string>>({});
+
+  // Fetch client names
+  useEffect(() => {
+    const fetchClientNames = async () => {
+      const uniqueClientIds = [...new Set(projects.map(p => p.client_id))];
+      if (uniqueClientIds.length > 0) {
+        const { data: clientsData, error } = await supabase
+          .from('users')
+          .select('id, full_name')
+          .in('id', uniqueClientIds);
+
+        if (!error && clientsData) {
+          const clientNamesMap = clientsData.reduce((acc, client) => {
+            acc[client.id] = client.full_name || 'Unknown Client';
+            return acc;
+          }, {} as Record<string, string>);
+          setClientNames(clientNamesMap);
+        }
+      }
+    };
+
+    fetchClientNames();
+  }, [projects]);
+
   // Removed unused optimized data loading - using direct calculations instead
   const analyticsData = useMemo(() => {
     // Get monthly trends for the last 12 months
@@ -224,7 +250,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ projects, timeF
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client ID
+                  Client Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Projects
@@ -244,7 +270,18 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ projects, timeF
               {analyticsData.topClients.map((client) => (
                 <tr key={client.clientId}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {client.clientId.substring(0, 8)}...
+                    <div className="flex items-center space-x-2">
+                      <span>{clientNames[client.clientId] || client.clientId.substring(0, 8) + '...'}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(client.clientId)}
+                        className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy full client ID"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {client.projects}

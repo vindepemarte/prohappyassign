@@ -268,26 +268,39 @@ const NotificationBell: React.FC = () => {
         )}
       </button>
 
-      {/* Modern Notification Panel - Inspired by GOOD UI/UX */}
+      {/* Modern Notification Modal - Mobile & Desktop Friendly */}
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-[32rem] overflow-hidden">
-          {/* Clean Header */}
-          <div className="px-6 py-4 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                >
-                  Mark all read
-                </button>
-              )}
-            </div>
-          </div>
+        <>
+          {/* Mobile/Desktop Modal Overlay */}
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden">
+              {/* Clean Header with Close Button */}
+              <div className="px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
+                  <div className="flex items-center space-x-3">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setIsOpen(false)}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-          {/* Notifications Content */}
-          <div className="max-h-80 overflow-y-auto">
+              {/* Notifications Content */}
+              <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="loading-spinner loading-spinner--medium"></div>
@@ -352,10 +365,11 @@ const NotificationBell: React.FC = () => {
                     ))}
                   </div>
                 )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

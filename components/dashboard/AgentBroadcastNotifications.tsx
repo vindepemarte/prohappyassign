@@ -125,7 +125,7 @@ const AgentBroadcastNotifications: React.FC = () => {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter notification title..."
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-gray-900 placeholder-gray-500"
             maxLength={100}
           />
           <p className="text-xs text-gray-500 mt-1">{title.length}/100 characters</p>
@@ -141,7 +141,7 @@ const AgentBroadcastNotifications: React.FC = () => {
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Enter your message..."
             rows={4}
-            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none"
+            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all resize-none text-gray-900 placeholder-gray-500"
             maxLength={500}
           />
           <p className="text-xs text-gray-500 mt-1">{message.length}/500 characters</p>
