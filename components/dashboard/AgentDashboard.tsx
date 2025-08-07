@@ -11,7 +11,7 @@ import ModernStatusSelector from '../common/ModernStatusSelector';
 import ModernSearchField from '../common/ModernSearchField';
 import AgentBroadcastNotifications from './AgentBroadcastNotifications';
 import LoadingWrapper from '../common/LoadingWrapper';
-import AgentNotificationSender from './AgentNotificationSender';
+
 import NotificationStatusMonitor from './NotificationStatusMonitor';
 import PushNotificationTester from '../debug/PushNotificationTester';
 import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
