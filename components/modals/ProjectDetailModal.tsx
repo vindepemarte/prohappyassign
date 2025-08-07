@@ -119,13 +119,18 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
     const handleAdjustSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user || !project) return;
+        
+        console.log(`Submitting word count adjustment for project ${project.id}: ${newWordCount} words`);
+        
         setFormStatus('submitting');
         setFormError('');
         try {
             await requestWordCountChange(project.id, newWordCount);
+            console.log(`Word count adjustment submitted successfully for project ${project.id}`);
             setFormStatus('success');
             setTimeout(onClose, 2000);
         } catch (e) {
+            console.error(`Error submitting word count adjustment for project ${project.id}:`, e);
             setFormStatus('error');
             setFormError(e instanceof Error ? e.message : 'Failed to submit adjustment.');
         }
@@ -175,15 +180,19 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
         e.preventDefault();
         if (!user || !project || !newDeadline) return;
 
+        console.log(`Submitting deadline adjustment for project ${project.id}: ${newDeadline}`);
+
         setFormStatus('submitting');
         setFormError('');
 
         try {
             const deadlineDate = new Date(newDeadline);
             await requestDeadlineChange(project.id, deadlineDate);
+            console.log(`Deadline adjustment submitted successfully for project ${project.id}`);
             setFormStatus('success');
             setTimeout(onClose, 2000);
         } catch (e) {
+            console.error(`Error submitting deadline adjustment for project ${project.id}:`, e);
             setFormStatus('error');
             setFormError(e instanceof Error ? e.message : 'Failed to submit deadline adjustment.');
         }

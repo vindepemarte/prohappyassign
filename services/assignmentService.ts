@@ -301,16 +301,27 @@ export const submitChangeRequest = async (data: ChangesFormData, userId: string)
         throw new Error(`Failed to update project status: ${statusError.message}`);
     }
 
-    // 4. Notify worker
+    // 4. Notify worker using WorkflowNotificationService
     const { workerId } = await getProjectParticipantIds(data.projectId);
     if (workerId) {
-        fireAndForgetNotification(sendNotification({
-            target: { userIds: [workerId] },
-            payload: {
-                title: 'Changes Requested',
-                body: `The client has requested changes for project #${data.projectId}.`
+        try {
+            const { data: project } = await supabase
+                .from('projects')
+                .select('title')
+                .eq('id', data.projectId)
+                .single();
+
+            if (project) {
+                await WorkflowNotificationService.notifyChangesRequested(
+                    data.projectId,
+                    workerId,
+                    userId,
+                    project.title
+                );
             }
-        }));
+        } catch (notificationError) {
+            console.error('Failed to send change request notification:', notificationError);
+        }
     }
 };
 
@@ -793,6 +804,8 @@ export const requestWordCountChange = async (projectId: number, newWordCount: nu
     const pricingBreakdown = calculateEnhancedPrice(newWordCount, deadlineDate);
 
     // 3. Update project with new word count, price, and status
+    console.log(`Updating project ${projectId} status to 'pending_quote_approval' for word count change`);
+    
     const { error } = await supabase
         .from('projects')
         .update({
@@ -806,17 +819,36 @@ export const requestWordCountChange = async (projectId: number, newWordCount: nu
         .eq('id', projectId);
     
     if (error) {
+        console.error(`Error updating project ${projectId} for word count change:`, error);
         throw new Error(`Failed to request word count change: ${error.message}`);
     }
 
-    // 3. Notify agents
-    fireAndForgetNotification(sendNotification({
-        target: { role: 'agent' },
-        payload: {
-            title: 'Quote Change Request',
-            body: `A worker has requested a new quote for project #${projectId}.`
+    console.log(`Successfully updated project ${projectId} status to 'pending_quote_approval'`);
+
+    // Clear project caches to ensure fresh data
+    projectCache.clear();
+    queryOptimizer.invalidateCache('projects');
+
+    // 4. Notify agents and client using WorkflowNotificationService
+    try {
+        const { data: project } = await supabase
+            .from('projects')
+            .select('title, client_id')
+            .eq('id', projectId)
+            .single();
+
+        if (project) {
+            await WorkflowNotificationService.notifyWordCountAdjustmentRequest(
+                projectId,
+                project.client_id,
+                '', // workerId will be filled by the service
+                project.title,
+                newWordCount
+            );
         }
-    }));
+    } catch (notificationError) {
+        console.error('Failed to send word count adjustment notification:', notificationError);
+    }
 };
 
 /**
@@ -845,6 +877,8 @@ export const requestDeadlineChange = async (projectId: number, newDeadline: Date
     const pricingBreakdown = calculateEnhancedPrice(currentWordCount, newDeadline);
 
     // 3. Update project with new deadline, price, and status
+    console.log(`Updating project ${projectId} status to 'pending_quote_approval' for deadline change`);
+    
     const { error } = await supabase
         .from('projects')
         .update({
@@ -858,28 +892,35 @@ export const requestDeadlineChange = async (projectId: number, newDeadline: Date
         .eq('id', projectId);
     
     if (error) {
+        console.error(`Error updating project ${projectId} for deadline change:`, error);
         throw new Error(`Failed to request deadline change: ${error.message}`);
     }
 
-    // 4. Notify agents and client
-    fireAndForgetNotification(sendNotification({
-        target: { role: 'agent' },
-        payload: {
-            title: 'Deadline Change Request',
-            body: `A worker has requested a deadline change for project #${projectId}.`
-        }
-    }));
+    console.log(`Successfully updated project ${projectId} status to 'pending_quote_approval'`);
 
-    // Notify client about deadline change request
-    const { clientId } = await getProjectParticipantIds(projectId);
-    if (clientId) {
-        fireAndForgetNotification(sendNotification({
-            target: { userIds: [clientId] },
-            payload: {
-                title: 'Deadline Change Requested',
-                body: `The worker has requested a deadline change for your project #${projectId}. You will be notified of the new pricing.`
-            }
-        }));
+    // Clear project caches to ensure fresh data
+    projectCache.clear();
+    queryOptimizer.invalidateCache('projects');
+
+    // 4. Notify agents and client using WorkflowNotificationService
+    try {
+        const { data: project } = await supabase
+            .from('projects')
+            .select('title, client_id')
+            .eq('id', projectId)
+            .single();
+
+        if (project) {
+            await WorkflowNotificationService.notifyDeadlineAdjustmentRequest(
+                projectId,
+                project.client_id,
+                '', // workerId will be filled by the service
+                project.title,
+                newDeadline.toLocaleDateString()
+            );
+        }
+    } catch (notificationError) {
+        console.error('Failed to send deadline adjustment notification:', notificationError);
     }
 };
 

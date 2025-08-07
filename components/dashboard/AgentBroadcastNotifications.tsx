@@ -39,13 +39,22 @@ const AgentBroadcastNotifications: React.FC = () => {
     }
 
     try {
+      console.log('Searching for users with term:', searchTerm);
+      
       const { data, error } = await supabase
         .from('users')
         .select('id, full_name, role')
         .or(`full_name.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`)
         .limit(10);
 
-      if (!error && data) {
+      if (error) {
+        console.error('Error searching users:', error);
+        return;
+      }
+
+      console.log('Search results:', data);
+
+      if (data) {
         setUserSearchResults(data.map(u => ({
           id: u.id,
           name: u.full_name || 'Unknown User',
@@ -286,7 +295,14 @@ const AgentBroadcastNotifications: React.FC = () => {
               <input
                 type="text"
                 placeholder="Search by name or user ID..."
-                onChange={(e) => searchUsers(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Debounce the search
+                  clearTimeout(window.searchTimeout);
+                  window.searchTimeout = setTimeout(() => {
+                    searchUsers(value);
+                  }, 300);
+                }}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-gray-900 placeholder-gray-500"
               />
               
