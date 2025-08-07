@@ -213,32 +213,33 @@ const WorkerDashboard: React.FC = () => {
                                                 Assigned on: {new Date(project.updated_at).toLocaleDateString()}
                                             </p>
                                         </div>
-                                    <div className="mt-4 border-t pt-3 text-sm text-gray-600 grid grid-cols-2 gap-2">
-                                        <p><strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}</p>
-                                        <p><strong>Word Count:</strong> {currentWordCount.toLocaleString()}</p>
-                                    </div>
-                                    <div className={`mt-3 border rounded-lg p-3 text-center ${isCompleted
-                                        ? 'bg-green-50 border-green-200'
-                                        : 'bg-gray-50 border-gray-200'
-                                        }`}>
-                                        <p className={`font-semibold ${isCompleted ? 'text-green-800' : 'text-gray-600'
+                                        <div className="mt-4 border-t pt-3 text-sm text-gray-600 grid grid-cols-2 gap-2">
+                                            <p><strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}</p>
+                                            <p><strong>Word Count:</strong> {currentWordCount.toLocaleString()}</p>
+                                        </div>
+                                        <div className={`mt-3 border rounded-lg p-3 text-center ${isCompleted
+                                            ? 'bg-green-50 border-green-200'
+                                            : 'bg-gray-50 border-gray-200'
                                             }`}>
-                                            {isCompleted ? 'Earned: ' : 'Potential Payout: '}
-                                            ₹{calculateWorkerPayout(currentWordCount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                                        </p>
-                                        {!isCompleted && (
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                Payment upon completion
+                                            <p className={`font-semibold ${isCompleted ? 'text-green-800' : 'text-gray-600'
+                                                }`}>
+                                                {isCompleted ? 'Earned: ' : 'Potential Payout: '}
+                                                ₹{calculateWorkerPayout(currentWordCount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                                             </p>
-                                        )}
-                                    </div>
-                                    <div className="mt-4 flex justify-end">
-                                        <Button
-                                            className="!w-auto py-2 px-4 text-sm"
-                                            onClick={() => handleOpenModal(project.id)}
-                                        >
-                                            View Details &amp; Actions
-                                        </Button>
+                                            {!isCompleted && (
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Payment upon completion
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="mt-4 flex justify-end">
+                                            <Button
+                                                className="!w-auto py-2 px-4 text-sm"
+                                                onClick={() => handleOpenModal(project.id)}
+                                            >
+                                                View Details &amp; Actions
+                                            </Button>
+                                        </div>
                                     </div>
                                 </ProjectCard>
                             )
