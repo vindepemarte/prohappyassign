@@ -79,18 +79,18 @@ SELECT
 FROM (
   VALUES 
     -- Projects with different statuses
-    ('pending_payment_approval', 'SEO Article Writing', 'Write a comprehensive SEO article about digital marketing trends', 1000, NULL, 150.00, '2025-01-15', 'ORD-2025-01-000001', 0.00, 'normal', NULL),
-    ('awaiting_worker_assignment', 'Blog Post Series', 'Create a 5-part blog series on sustainable living', 2500, NULL, 375.00, '2025-01-20', 'ORD-2025-01-000002', 25.00, 'moderate', NULL),
-    ('in_progress', 'Product Description', 'Write compelling product descriptions for e-commerce site', 800, NULL, 120.00, '2025-01-12', 'ORD-2025-01-000003', 50.00, 'urgent', NULL),
-    ('pending_quote_approval', 'Technical Documentation', 'Create user manual for software application', 1500, 2000, 225.00, '2025-01-25', 'ORD-2025-01-000004', 0.00, 'normal', 'word_count'),
-    ('needs_changes', 'Website Content', 'Write content for company website pages', 1200, NULL, 180.00, '2025-01-18', 'ORD-2025-01-000005', 15.00, 'moderate', NULL),
-    ('pending_final_approval', 'Press Release', 'Draft press release for product launch', 600, NULL, 90.00, '2025-01-10', 'ORD-2025-01-000006', 75.00, 'rush', NULL),
-    ('completed', 'Social Media Content', 'Create social media posts for marketing campaign', 500, NULL, 75.00, '2025-01-08', 'ORD-2025-01-000007', 100.00, 'rush', NULL),
-    ('pending_quote_approval', 'Research Article', 'Write research-based article on climate change', 3000, 2500, 450.00, '2025-01-30', 'ORD-2025-01-000008', 0.00, 'normal', 'deadline'),
-    ('refund', 'Newsletter Content', 'Write monthly newsletter content', 800, NULL, 120.00, '2025-01-14', 'ORD-2025-01-000009', 30.00, 'moderate', NULL),
-    ('cancelled', 'Case Study', 'Write detailed case study for client success story', 1800, NULL, 270.00, '2025-01-22', 'ORD-2025-01-000010', 10.00, 'normal', NULL),
-    ('in_progress', 'Email Campaign', 'Create email marketing campaign content', 1000, 1200, 150.00, '2025-01-16', 'ORD-2025-01-000011', 20.00, 'moderate', 'word_count'),
-    ('pending_payment_approval', 'Landing Page Copy', 'Write conversion-focused landing page copy', 700, NULL, 105.00, '2025-01-13', 'ORD-2025-01-000012', 40.00, 'urgent', NULL)
+    ('pending_payment_approval', 'SEO Article Writing', 'Write a comprehensive SEO article about digital marketing trends', 1000, NULL, 150.00, DATE '2025-01-15', 'ORD-2025-01-000001', 0.00, 'normal', NULL),
+    ('awaiting_worker_assignment', 'Blog Post Series', 'Create a 5-part blog series on sustainable living', 2500, NULL, 375.00, DATE '2025-01-20', 'ORD-2025-01-000002', 25.00, 'moderate', NULL),
+    ('in_progress', 'Product Description', 'Write compelling product descriptions for e-commerce site', 800, NULL, 120.00, DATE '2025-01-12', 'ORD-2025-01-000003', 50.00, 'urgent', NULL),
+    ('pending_quote_approval', 'Technical Documentation', 'Create user manual for software application', 1500, 2000, 225.00, DATE '2025-01-25', 'ORD-2025-01-000004', 0.00, 'normal', 'word_count'),
+    ('needs_changes', 'Website Content', 'Write content for company website pages', 1200, NULL, 180.00, DATE '2025-01-18', 'ORD-2025-01-000005', 15.00, 'moderate', NULL),
+    ('pending_final_approval', 'Press Release', 'Draft press release for product launch', 600, NULL, 90.00, DATE '2025-01-10', 'ORD-2025-01-000006', 75.00, 'rush', NULL),
+    ('completed', 'Social Media Content', 'Create social media posts for marketing campaign', 500, NULL, 75.00, DATE '2025-01-08', 'ORD-2025-01-000007', 100.00, 'rush', NULL),
+    ('pending_quote_approval', 'Research Article', 'Write research-based article on climate change', 3000, 2500, 450.00, DATE '2025-01-30', 'ORD-2025-01-000008', 0.00, 'normal', 'deadline'),
+    ('refund', 'Newsletter Content', 'Write monthly newsletter content', 800, NULL, 120.00, DATE '2025-01-14', 'ORD-2025-01-000009', 30.00, 'moderate', NULL),
+    ('cancelled', 'Case Study', 'Write detailed case study for client success story', 1800, NULL, 270.00, DATE '2025-01-22', 'ORD-2025-01-000010', 10.00, 'normal', NULL),
+    ('in_progress', 'Email Campaign', 'Create email marketing campaign content', 1000, 1200, 150.00, DATE '2025-01-16', 'ORD-2025-01-000011', 20.00, 'moderate', 'word_count'),
+    ('pending_payment_approval', 'Landing Page Copy', 'Write conversion-focused landing page copy', 700, NULL, 105.00, DATE '2025-01-13', 'ORD-2025-01-000012', 40.00, 'urgent', NULL)
 ) AS p(status, title, description, initial_word_count, adjusted_word_count, cost_gbp, deadline, order_reference, deadline_charge, urgency_level, adjustment_type)
 CROSS JOIN (SELECT id FROM clients WHERE rn = 1) c
 CROSS JOIN (SELECT id FROM workers WHERE rn = 1) w  
@@ -120,7 +120,7 @@ INSERT INTO deadline_extension_requests (project_id, worker_id, requested_deadli
 SELECT 
   p.id,
   p.worker_id,
-  p.deadline + INTERVAL '3 days',
+  (p.deadline + INTERVAL '3 days')::timestamp with time zone,
   'Need additional time for research and fact-checking to ensure quality delivery.',
   'pending'
 FROM projects p
