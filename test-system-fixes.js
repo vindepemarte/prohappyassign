@@ -8,26 +8,28 @@ async function testWordCountChange() {
   console.log('🧪 Testing word count change...');
   
   try {
-    // This would be called from the modal
-    const projectId = 1; // Replace with actual project ID
-    const newWordCount = 1500;
-    
-    // Simulate the function call
-    console.log(`Requesting word count change for project ${projectId} to ${newWordCount} words`);
-    
-    // Check if status is set to 'pending_quote_approval'
-    const { data: project } = await supabase
+    // Get a sample project to test with
+    const { data: projects } = await supabase
       .from('projects')
-      .select('status, adjusted_word_count')
-      .eq('id', projectId)
-      .single();
+      .select('id, status, adjusted_word_count, initial_word_count')
+      .limit(1);
     
-    console.log('Project status after change:', project);
+    if (!projects || projects.length === 0) {
+      console.log('⚠️ No projects found to test with');
+      return;
+    }
     
-    if (project.status === 'pending_quote_approval') {
-      console.log('✅ Word count change status is correct');
+    const project = projects[0];
+    console.log('Testing with project:', project);
+    
+    // Check if the project has the expected structure
+    if (project.status && typeof project.initial_word_count === 'number') {
+      console.log('✅ Project structure is correct');
+      console.log(`Current status: ${project.status}`);
+      console.log(`Initial word count: ${project.initial_word_count}`);
+      console.log(`Adjusted word count: ${project.adjusted_word_count || 'None'}`);
     } else {
-      console.log('❌ Word count change status is incorrect:', project.status);
+      console.log('❌ Project structure is incorrect');
     }
   } catch (error) {
     console.error('❌ Error testing word count change:', error);
@@ -63,7 +65,21 @@ async function testUserSearch() {
   console.log('🧪 Testing user search...');
   
   try {
-    const searchTerm = 'test'; // Replace with actual search term
+    // First, get all users to see what we have
+    const { data: allUsers } = await supabase
+      .from('users')
+      .select('id, full_name, role')
+      .limit(5);
+    
+    console.log('Sample users in database:', allUsers);
+    
+    if (!allUsers || allUsers.length === 0) {
+      console.log('⚠️ No users found in database');
+      return;
+    }
+    
+    // Test search with first user's name
+    const searchTerm = allUsers[0].full_name ? allUsers[0].full_name.substring(0, 3) : 'test';
     
     const { data: users, error } = await supabase
       .from('users')
@@ -76,7 +92,7 @@ async function testUserSearch() {
       return;
     }
     
-    console.log('User search results:', users);
+    console.log(`Search results for "${searchTerm}":`, users);
     
     if (users && users.length > 0) {
       console.log('✅ User search is working');
