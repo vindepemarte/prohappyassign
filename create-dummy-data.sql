@@ -120,7 +120,7 @@ INSERT INTO deadline_extension_requests (project_id, worker_id, requested_deadli
 SELECT 
   p.id,
   p.worker_id,
-  (p.deadline + INTERVAL '3 days')::timestamp with time zone,
+  p.deadline + INTERVAL '3 days',
   'Need additional time for research and fact-checking to ensure quality delivery.',
   'pending'
 FROM projects p
@@ -173,7 +173,7 @@ END $$;
 -- 9. Show sample data for verification
 SELECT 
     'USERS' as table_name,
-    role,
+    role::text as role,
     COUNT(*) as count
 FROM users 
 GROUP BY role
