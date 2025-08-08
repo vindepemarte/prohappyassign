@@ -1,87 +1,197 @@
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '../services/supabase';
-import { Session, User } from '@supabase/supabase-js';
-import { Profile } from '../types';
-import { subscribeUser } from '../services/notificationService';
+
+// Define our user type (matching PostgreSQL schema)
+export interface User {
+  id: string;
+  email: string;
+  full_name: string | null;
+  role: 'client' | 'worker' | 'agent';
+  avatar_url: string | null;
+  email_verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 interface AuthContextType {
-  session: Session | null;
   user: User | null;
-  profile: Profile | null;
+  token: string | null;
   loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, full_name: string, role?: 'client' | 'worker' | 'agent') => Promise<void>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<Pick<User, 'full_name' | 'avatar_url'>>) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const API_BASE = '/api/auth';
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Load token from localStorage on mount
   useEffect(() => {
-    const getSessionAndProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false); // Set loading to false immediately after getting session
-      
-      if (session?.user) {
-        // Fetch profile asynchronously without blocking the UI
-        const { data: userProfile, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-        if (error) console.error('Error fetching profile on initial load:', error.message);
-        setProfile(userProfile);
-      }
-    };
-    
-    getSessionAndProfile();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          // Don't set loading to true on auth state change - keep UI responsive
-          // Fetch profile using maybeSingle() to prevent errors during the
-          // race condition right after sign-up.
-          const { data: userProfile, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .maybeSingle();
-          if (error) {
-             console.error('Error fetching profile on auth state change:', error.message);
-          }
-          setProfile(userProfile);
-          
-          // Don't auto-subscribe to push notifications - let user choose
-          console.log('User authenticated, push notifications available for manual subscription');
-        } else {
-          setProfile(null);
-        }
-      }
-    );
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
+    const savedToken = localStorage.getItem('auth_token');
+    if (savedToken) {
+      setToken(savedToken);
+      verifyToken(savedToken);
+    } else {
+      setLoading(false);
+    }
   }, []);
 
+  // Verify token and get user data
+  const verifyToken = async (tokenToVerify: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/me`, {
+        headers: {
+          'Authorization': `Bearer ${tokenToVerify}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data.user);
+        setToken(tokenToVerify);
+        console.log('✅ User authenticated with PostgreSQL');
+      } else {
+        // Token is invalid, remove it
+        localStorage.removeItem('auth_token');
+        setToken(null);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      localStorage.removeItem('auth_token');
+      setToken(null);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Login function
+  const login = async (email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Save token and user data
+      localStorage.setItem('auth_token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+
+      console.log('✅ User logged in with PostgreSQL');
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  // Register function
+  const register = async (email: string, password: string, full_name: string, role: 'client' | 'worker' | 'agent' = 'client') => {
+    try {
+      const response = await fetch(`${API_BASE}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, full_name, role }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      // Save token and user data
+      localStorage.setItem('auth_token', data.token);
+      setToken(data.token);
+      setUser(data.user);
+
+      console.log('✅ User registered with PostgreSQL');
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  };
+
+  // Logout function
   const logout = async () => {
-    await supabase.auth.signOut();
+    try {
+      if (token) {
+        await fetch(`${API_BASE}/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local state
+      localStorage.removeItem('auth_token');
+      setToken(null);
+      setUser(null);
+      console.log('✅ User logged out');
+    }
+  };
+
+  // Update profile function
+  const updateProfile = async (updates: Partial<Pick<User, 'full_name' | 'avatar_url'>>) => {
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Profile update failed');
+      }
+
+      // Update local user state
+      setUser(data.user);
+    } catch (error) {
+      console.error('Profile update error:', error);
+      throw error;
+    }
   };
 
   const value = {
-    session,
     user,
-    profile,
+    token,
     loading,
+    login,
+    register,
     logout,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -2,12 +2,23 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config({ path: '.env.local' });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Parse JSON bodies
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Import auth routes (using dynamic import for ES modules)
+const { default: authRoutes } = await import('./routes/auth.js');
 
 // Add request logging
 app.use((req, res, next) => {
@@ -57,6 +68,9 @@ app.use(express.static(distPath, {
     }
   }
 }));
+
+// API routes
+app.use('/api/auth', authRoutes);
 
 // Health check endpoints
 app.get('/health', (req, res) => {
