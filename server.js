@@ -6,8 +6,18 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 
-// Load environment variables
-dotenv.config({ path: '.env.local' });
+// Load environment variables - check multiple sources
+dotenv.config({ path: '.env.local' }); // For local development
+dotenv.config(); // For .env file
+// Environment variables set directly in the system (like Coolify) will override these
+
+// Debug environment variables
+console.log('🔍 Environment check:');
+console.log('NODE_ENV:', process.env.NODE_ENV || 'not set');
+console.log('PORT:', process.env.PORT || 'not set');
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'set' : 'NOT SET');
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'set' : 'NOT SET');
+console.log('BCRYPT_ROUNDS:', process.env.BCRYPT_ROUNDS || 'not set (will use default 12)');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,11 +44,26 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Import routes (using dynamic import for ES modules)
-const { default: authRoutes } = await import('./routes/auth.js');
-const { default: projectRoutes } = await import('./routes/projects.js');
-const { default: notificationRoutes } = await import('./routes/notifications.js');
-const { default: fileRoutes } = await import('./routes/files.js');
-const { default: userRoutes } = await import('./routes/users.js');
+try {
+  console.log('📦 Loading routes...');
+  const { default: authRoutes } = await import('./routes/auth.js');
+  const { default: projectRoutes } = await import('./routes/projects.js');
+  const { default: notificationRoutes } = await import('./routes/notifications.js');
+  const { default: fileRoutes } = await import('./routes/files.js');
+  const { default: userRoutes } = await import('./routes/users.js');
+  console.log('✅ All routes loaded successfully');
+  
+  // API routes
+  app.use('/api/auth', authRoutes);
+  app.use('/api/projects', projectRoutes);
+  app.use('/api/notifications', notificationRoutes);
+  app.use('/api/files', fileRoutes);
+  app.use('/api/users', userRoutes);
+  console.log('✅ All routes mounted successfully');
+} catch (error) {
+  console.error('❌ Failed to load routes:', error);
+  process.exit(1);
+}
 
 // Add request logging
 app.use((req, res, next) => {
@@ -94,20 +119,33 @@ app.use(express.static(distPath, {
   }
 }));
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/files', fileRoutes);
-app.use('/api/users', userRoutes);
+// Routes are now mounted in the try block above
 
 // Health check endpoints
 app.get('/health', (req, res) => {
-  res.status(200).send('OK');
+  res.json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    env: {
+      NODE_ENV: process.env.NODE_ENV || 'not set',
+      DATABASE_URL: process.env.DATABASE_URL ? 'set' : 'NOT SET',
+      JWT_SECRET: process.env.JWT_SECRET ? 'set' : 'NOT SET'
+    }
+  });
 });
 
 app.get('/healthz', (req, res) => {
-  res.status(200).send('OK');
+  res.json({ status: 'ok' });
+});
+
+// Test endpoint to check if API is working
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'API is working',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // SPA fallback - serve index.html for all other routes

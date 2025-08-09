@@ -9,11 +9,19 @@ const router = express.Router();
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: false,
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12');
+
+// Debug environment variables (remove in production)
+if (!JWT_SECRET) {
+  console.error('❌ JWT_SECRET environment variable is not set!');
+}
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL environment variable is not set!');
+}
 
 // Middleware to verify JWT token
 const authenticateToken = (req, res, next) => {
@@ -110,9 +118,11 @@ router.post('/register', async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
+    console.log('🔐 Login attempt for:', req.body.email);
     const { email, password } = req.body;
 
     if (!email || !password) {
+      console.log('❌ Missing email or password');
       return res.status(400).json({ 
         error: 'Email and password are required' 
       });
