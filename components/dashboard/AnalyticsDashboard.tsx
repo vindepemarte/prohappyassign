@@ -3,7 +3,7 @@ import { Project } from '../../types';
 import { TimeFilter } from '../common/FilterBar';
 import { ProfitCalculator } from '../../utils/profitCalculator';
 import { queryOptimizer } from '../../utils/queryOptimizer';
-import { supabase } from '../../services/supabase';
+// Supabase removed - using PostgreSQL API
 // Removed unused imports - LoadingWrapper and useLoadingState
 
 interface AnalyticsDashboardProps {

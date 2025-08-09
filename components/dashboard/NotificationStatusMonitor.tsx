@@ -7,7 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { getNotificationQueueStatus } from '../../services/notificationService';
 import { NotificationTracker, getRetryQueueStatus } from '../../services/notificationTracker';
-import { supabase } from '../../services/supabase';
+// Supabase removed - using PostgreSQL API
 
 interface NotificationStats {
   total: number;
@@ -79,16 +79,10 @@ export const NotificationStatusMonitor: React.FC = () => {
         // Fetch notification statistics
         const notificationStats = await NotificationTracker.getNotificationStats(startDate, now);
         
-        // Fetch broadcast notification stats from database
-        const { data: broadcastStats } = await supabase
-          .from('notification_history')
-          .select('title')
-          .gte('created_at', startDate.toISOString())
-          .lte('created_at', now.toISOString())
-          .like('title', '📢%'); // Broadcast notifications start with 📢
-        
-        const broadcastCount = broadcastStats?.length || 0;
-        const workflowCount = notificationStats.total - broadcastCount;
+        // TODO: Implement API endpoint for notification history
+        // For now, using placeholder values
+        const broadcastCount = 0;
+        const workflowCount = notificationStats.total;
         
         setStats({
           ...notificationStats,

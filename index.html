@@ -15,64 +15,15 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ProHappy" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/styles/design-system.css">
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@^19.1.1",
-    "react/": "https://esm.sh/react@^19.1.1/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.12.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.0",
-    "react-dropzone": "https://esm.sh/react-dropzone@^14.2.3"
-  }
-}
-</script>
 <link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-[#f0f2f5]">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', async () => {
-          try {
-            // Check if we're on HTTPS or localhost
-            const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-            
-            if (!isSecure) {
-              console.warn('Service Worker requires HTTPS or localhost. Current protocol:', location.protocol);
-              return;
-            }
-
-            // First, check if the service worker file is accessible
-            const swResponse = await fetch('/sw.js');
-            if (!swResponse.ok) {
-              console.error('Service Worker file not accessible:', swResponse.status, swResponse.statusText);
-              return;
-            }
-
-            // Register the service worker
-            const registration = await navigator.serviceWorker.register('/sw.js', {
-              scope: '/'
-            });
-            
-            console.log('Service Worker registered successfully with scope:', registration.scope);
-            
-            // Handle updates
-            registration.addEventListener('updatefound', () => {
-              console.log('Service Worker update found');
-            });
-            
-          } catch (error) {
-            console.error('Service Worker registration failed:', error);
-            // Don't fail the app if service worker fails
-          }
-        });
-      } else {
-        console.warn('Service Workers are not supported in this browser');
-      }
+      // Service Worker temporarily disabled for debugging SSL issues
+      console.log('Service Worker registration disabled for debugging');
     </script>
   </body>
 </html>

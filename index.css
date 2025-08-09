@@ -1,6 +1,11 @@
 /* Import Design System */
 @import './styles/design-system.css';
 
+/* Tailwind CSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Basic CSS reset and styles */
 * {
   margin: 0;

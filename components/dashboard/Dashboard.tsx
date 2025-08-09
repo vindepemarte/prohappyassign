@@ -13,13 +13,13 @@ const LoadingDashboard: React.FC = () => (
 );
 
 const Dashboard: React.FC = () => {
-    const { profile, loading } = useAuth();
+    const { user, loading } = useAuth();
 
-    if (loading || !profile) {
+    if (loading || !user) {
         return <LoadingDashboard />;
     }
 
-    switch (profile.role) {
+    switch (user.role) {
         case 'client':
             return <ClientDashboard />;
         case 'worker':

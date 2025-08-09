@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../../services/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import Button from '../Button';
 import Input from '../Input';
 import { COLORS } from '../../constants';
@@ -9,18 +9,16 @@ const Login: React.FC = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const { login } = useAuth();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError('');
         
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
-
-        if (error) {
+        try {
+            await login(email, password);
+        } catch (error: any) {
             setError(error.message);
         }
         

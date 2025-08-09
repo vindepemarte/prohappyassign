@@ -22,7 +22,8 @@ import { ProfitCalculator } from '../../utils/profitCalculator';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import { useRobustLoading } from '../../hooks/useRobustLoading';
 import { performanceMonitor } from '../../utils/performanceMonitor';
-import { supabase } from '../../services/supabase';
+import { usersApi } from '../../services/apiService';
+// Supabase removed - using PostgreSQL API
 
 const ALL_STATUSES: ProjectStatus[] = [
     'pending_payment_approval',
@@ -193,17 +194,18 @@ const AgentDashboard: React.FC = () => {
             // Fetch client names
             const uniqueClientIds = [...new Set(projectsData.map(p => p.client_id))];
             if (uniqueClientIds.length > 0) {
-                const { data: clientsData, error } = await supabase
-                    .from('users')
-                    .select('id, full_name')
-                    .in('id', uniqueClientIds);
-
-                if (!error && clientsData) {
-                    const clientNamesMap = clientsData.reduce((acc, client) => {
-                        acc[client.id] = client.full_name || 'Unknown Client';
-                        return acc;
-                    }, {} as Record<string, string>);
-                    setClientNames(clientNamesMap);
+                try {
+                    const response = await usersApi.getByIds(uniqueClientIds);
+                    
+                    if (response.data) {
+                        const clientNamesMap = response.data.reduce((acc: Record<string, string>, client: any) => {
+                            acc[client.id] = client.full_name || 'Unknown Client';
+                            return acc;
+                        }, {});
+                        setClientNames(clientNamesMap);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch client names:', error);
                 }
             }
 

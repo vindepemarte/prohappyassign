@@ -1,6 +1,8 @@
 // PostgreSQL-based notification service
 // Simplified version without push notifications
 
+import { notificationsApi, usersApi } from './apiService';
+
 export interface NotificationTarget {
   userIds?: string[];
   role?: 'client' | 'worker' | 'agent' | 'all';
@@ -13,8 +15,7 @@ export interface NotificationPayload {
 
 /**
  * Sends a notification (database only - no push notifications)
- * This is a placeholder that logs notifications to console
- * In a full implementation, this would call an API endpoint to log to database
+ * Saves notification to database via API
  */
 export const sendNotification = async ({ target, payload }: { 
   target: NotificationTarget; 
@@ -27,8 +28,40 @@ export const sendNotification = async ({ target, payload }: {
       timestamp: new Date().toISOString()
     });
 
-    // In a full implementation, this would make an API call to log the notification
-    // For now, we'll just return success
+    // If specific user IDs are provided, send to each
+    if (target.userIds && target.userIds.length > 0) {
+      for (const userId of target.userIds) {
+        await notificationsApi.create({
+          user_id: userId,
+          title: payload.title,
+          body: payload.body,
+          delivery_status: 'pending'
+        });
+      }
+    }
+
+    // If role-based targeting, get users with that role and send to each
+    if (target.role && target.role !== 'all') {
+      try {
+        const response = await usersApi.getByRole(target.role);
+        
+        if (response.data && response.data.length > 0) {
+          for (const user of response.data) {
+            await notificationsApi.create({
+              user_id: user.id,
+              title: payload.title,
+              body: payload.body,
+              delivery_status: 'pending'
+            });
+          }
+        } else {
+          console.warn(`No users found with role: ${target.role}`);
+        }
+      } catch (error) {
+        console.error('Error sending role-based notification:', error);
+      }
+    }
+
     return { 
       success: true,
       data: { message: 'Notification logged successfully' }

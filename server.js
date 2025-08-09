@@ -3,6 +3,8 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import cors from 'cors';
+import helmet from 'helmet';
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
@@ -13,12 +15,30 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Security middleware - disabled HTTPS redirect for local development
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for now to avoid mixed content issues
+  hsts: false, // Disable HTTPS redirect
+  crossOriginEmbedderPolicy: false,
+}));
+
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production'
+    ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['https://prohappya.uk']) // Use env var or fallback
+    : ['http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:3000'],
+  credentials: true
+}));
+
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Import auth routes (using dynamic import for ES modules)
+// Import routes (using dynamic import for ES modules)
 const { default: authRoutes } = await import('./routes/auth.js');
+const { default: projectRoutes } = await import('./routes/projects.js');
+const { default: notificationRoutes } = await import('./routes/notifications.js');
+const { default: fileRoutes } = await import('./routes/files.js');
+const { default: userRoutes } = await import('./routes/users.js');
 
 // Add request logging
 app.use((req, res, next) => {
@@ -49,16 +69,21 @@ console.log('Dist directory contents:', fs.readdirSync(distPath));
 app.use(express.static(distPath, {
   setHeaders: (res, filePath) => {
     console.log('Serving file:', filePath);
-    
+
+    // Disable HTTPS redirect headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+
     // Set proper MIME types and cache headers
     if (filePath.endsWith('.css')) {
       res.setHeader('Content-Type', 'text/css; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Cache-Control', 'no-cache'); // Disable caching for debugging
     } else if (filePath.endsWith('.js')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('Cache-Control', 'no-cache'); // Disable caching for debugging
     } else if (filePath.endsWith('.json')) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
     } else if (filePath.endsWith('sw.js')) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -71,6 +96,10 @@ app.use(express.static(distPath, {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/files', fileRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check endpoints
 app.get('/health', (req, res) => {
@@ -84,17 +113,17 @@ app.get('/healthz', (req, res) => {
 // SPA fallback - serve index.html for all other routes
 app.get('*', (req, res) => {
   const indexPath = path.join(__dirname, 'dist', 'index.html');
-  
+
   console.log('Fallback route hit for:', req.url);
-  
+
   // Check if the requested file exists in dist
   const requestedFile = path.join(__dirname, 'dist', req.path);
-  
+
   if (fs.existsSync(requestedFile) && fs.statSync(requestedFile).isFile()) {
     console.log('Serving existing file:', requestedFile);
     return res.sendFile(requestedFile);
   }
-  
+
   // File doesn't exist, serve index.html for SPA routing
   if (fs.existsSync(indexPath)) {
     console.log('Serving index.html for SPA routing');

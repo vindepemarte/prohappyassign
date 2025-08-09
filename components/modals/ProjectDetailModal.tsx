@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { getProjectDetails, getFileUrl, submitFinalWork, requestWordCountChange, cancelProject, requestDeadlineExtension, requestDeadlineChange } from '../../services/assignmentService';
+import { getProjectDetails, getFileUrl, submitFinalWork, requestWordCountChange, cancelProject, requestDeadlineChange } from '../../services/assignmentService';
 import { ProjectWithDetails } from '../../types';
 import Button from '../Button';
 import Input from '../Input';
@@ -41,10 +41,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
     const [cancellationReason, setCancellationReason] = useState('');
     const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
 
-    // Deadline extension states
-    const [requestedDeadline, setRequestedDeadline] = useState('');
-    const [extensionReason, setExtensionReason] = useState('');
-    const [deadlineExtensions, setDeadlineExtensions] = useState<any[]>([]);
+
 
     // Deadline adjustment states
     const [newDeadline, setNewDeadline] = useState('');
@@ -73,12 +70,8 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             const tomorrowString = tomorrow.toISOString().split('T')[0];
-            setRequestedDeadline(tomorrowString);
 
-            // Set deadline extensions from project data
-            setDeadlineExtensions(data.deadline_extension_requests || []);
-
-            // Set new deadline to tomorrow as minimum (reuse the same date)
+            // Set new deadline to tomorrow as minimum
             setNewDeadline(tomorrowString);
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to load project details.');
@@ -94,10 +87,8 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
         setFormError('');
         setCancellationReason('');
         setShowCancelConfirmation(false);
-        setExtensionReason('');
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        setRequestedDeadline(tomorrow.toISOString().split('T')[0]);
         setNewDeadline(tomorrow.toISOString().split('T')[0]);
     };
 
@@ -158,23 +149,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
         setShowCancelConfirmation(true);
     };
 
-    const handleDeadlineExtensionSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user || !project || !requestedDeadline || !extensionReason.trim()) return;
 
-        setFormStatus('submitting');
-        setFormError('');
-
-        try {
-            const deadlineDate = new Date(requestedDeadline);
-            await requestDeadlineExtension(project.id, deadlineDate, extensionReason, user.id);
-            setFormStatus('success');
-            setTimeout(onClose, 2000);
-        } catch (e) {
-            setFormStatus('error');
-            setFormError(e instanceof Error ? e.message : 'Failed to submit deadline extension request.');
-        }
-    };
 
     const handleDeadlineAdjustSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -200,10 +175,40 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
 
     if (!isOpen) return null;
 
-    const renderFileLink = (file: { file_name: string; file_path: string }) => (
-        <a href={getFileUrl(file.file_path)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+    const handleFileDownload = async (fileId: number, fileName: string) => {
+        try {
+            const response = await fetch(`/api/files/download/${fileId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to download file');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('File download error:', error);
+            alert('Failed to download file');
+        }
+    };
+
+    const renderFileLink = (file: { id: number; file_name: string; file_path: string }) => (
+        <button 
+            onClick={() => handleFileDownload(file.id, file.file_name)}
+            className="text-blue-600 hover:underline cursor-pointer bg-none border-none p-0 font-inherit"
+        >
             {file.file_name}
-        </a>
+        </button>
     );
 
     const renderTabContent = () => {
@@ -415,100 +420,6 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                         </div>
                     </div>
                 )
-            case 'deadline':
-                const currentDeadline = new Date(project.deadline);
-                const minDate = new Date();
-                minDate.setDate(minDate.getDate() + 1);
-
-                return (
-                    <div className="space-y-4">
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 className="font-bold text-lg text-blue-800 mb-2">📅 Request Deadline Extension</h4>
-                            <p className="text-sm text-blue-700 mb-2">
-                                Current deadline: <strong>{currentDeadline.toLocaleDateString()}</strong>
-                            </p>
-                            <p className="text-sm text-blue-700">
-                                If you need more time to complete this project, you can request a deadline extension.
-                                The client and agent will be notified of your request.
-                            </p>
-                        </div>
-
-                        {/* Show existing extension requests */}
-                        {deadlineExtensions.length > 0 && (
-                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                <h5 className="font-semibold text-gray-800 mb-3">Previous Extension Requests</h5>
-                                <div className="space-y-2">
-                                    {deadlineExtensions.map((extension, index) => (
-                                        <div key={extension.id} className={`p-3 rounded-lg border ${extension.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
-                                                extension.status === 'approved' ? 'bg-green-50 border-green-200' :
-                                                    'bg-red-50 border-red-200'
-                                            }`}>
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="text-sm font-medium">
-                                                        Requested: {new Date(extension.requested_deadline).toLocaleDateString()}
-                                                    </p>
-                                                    <p className="text-xs text-gray-600 mt-1">
-                                                        {extension.reason}
-                                                    </p>
-                                                </div>
-                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${extension.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                        extension.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                                            'bg-red-100 text-red-800'
-                                                    }`}>
-                                                    {extension.status.charAt(0).toUpperCase() + extension.status.slice(1)}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <form onSubmit={handleDeadlineExtensionSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    New Requested Deadline *
-                                </label>
-                                <input
-                                    type="date"
-                                    value={requestedDeadline}
-                                    onChange={(e) => setRequestedDeadline(e.target.value)}
-                                    min={minDate.toISOString().split('T')[0]}
-                                    className="form-input"
-                                    required
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Must be later than the current deadline ({currentDeadline.toLocaleDateString()})
-                                </p>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Reason for Extension *
-                                </label>
-                                <textarea
-                                    value={extensionReason}
-                                    onChange={(e) => setExtensionReason(e.target.value)}
-                                    placeholder="Please explain why you need more time to complete this project..."
-                                    className="form-input resize-none"
-                                    rows={4}
-                                    required
-                                />
-                            </div>
-
-                            {formError && <p className="text-sm text-center text-red-600">{formError}</p>}
-
-                            <Button
-                                type="submit"
-                                disabled={formStatus === 'submitting' || !requestedDeadline || !extensionReason.trim()}
-                                className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600"
-                            >
-                                {formStatus === 'submitting' ? 'Submitting Request...' : 'Request Extension'}
-                            </Button>
-                        </form>
-                    </div>
-                )
             case 'adjustDeadline':
                 const minDeadlineDate = new Date();
                 minDeadlineDate.setDate(minDeadlineDate.getDate() + 1);
@@ -631,11 +542,7 @@ const ProjectDetailModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
                             <TabButton tabId="submit">Submit Work</TabButton>
                             <TabButton tabId="adjust">Adjust Scope</TabButton>
                             <TabButton tabId="adjustDeadline">Adjust Deadline</TabButton>
-                            {/* Show deadline extension tab only for workers and active projects */}
-                            {user?.role === 'worker' && project.worker_id === user.id &&
-                                !['completed', 'cancelled', 'refund'].includes(project.status) && (
-                                    <TabButton tabId="deadline">Request Deadline</TabButton>
-                                )}
+
                             {/* Show cancel tab only for workers and cancellable projects */}
                             {user?.role === 'worker' && project.worker_id === user.id &&
                                 !['completed', 'cancelled', 'refund'].includes(project.status) && (

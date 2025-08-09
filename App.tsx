@@ -1,66 +1,29 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useAuth } from './hooks/useAuth';
 import AuthPage from './components/auth/AuthPage';
 import Dashboard from './components/dashboard/Dashboard';
 import Logo from './components/Logo';
-import { initializeOrderReferences } from './services/initializeOrderReferences';
-import { initializeNotificationSystem } from './services/notificationTracker';
-import { performanceMonitor } from './utils/performanceMonitor';
-import AppUpdateService from './services/appUpdateService';
-import UpdateNotification from './components/common/UpdateNotification';
 
 const App: React.FC = () => {
-  const { session, loading } = useAuth();
+  const { user, loading } = useAuth();
 
-  // Initialize order references, notification system, and performance monitoring on app startup
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Initialize performance monitoring immediately
-        performanceMonitor.initialize();
-        
-        // Initialize app update service
-        AppUpdateService.initialize();
-        
-        if (session) {
-          // Initialize services with error handling
-          try {
-            await initializeOrderReferences();
-          } catch (error) {
-            console.error('Failed to initialize order references:', error);
-          }
-          
-          try {
-            await initializeNotificationSystem();
-          } catch (error) {
-            console.error('Failed to initialize notification system:', error);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to initialize app:', error);
-      }
-    };
+  // Show loading while checking authentication
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+        <Logo className="w-32 h-32 animate-spin" />
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
-    initializeApp();
-
-    // Cleanup on unmount
-    return () => {
-      performanceMonitor.disconnect();
-    };
-  }, [session]);
-
-  // Show auth page immediately if no session, no loading screen
-  if (!session) {
+  // Show auth page if no user
+  if (!user) {
     return <AuthPage />;
   }
 
-  // Show dashboard immediately if session exists, no loading screen
-  return (
-    <>
-      <Dashboard />
-      <UpdateNotification />
-    </>
-  );
+  // Show the proper dashboard based on user role
+  return <Dashboard />;
 };
 
 export default App;

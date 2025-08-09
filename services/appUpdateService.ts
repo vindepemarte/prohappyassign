@@ -50,7 +50,7 @@ export class AppUpdateService {
       try {
         const registration = await navigator.serviceWorker.ready;
         await registration.update();
-        
+
         return {
           available: this.updateAvailable,
           version: this.getAppVersion(),
@@ -133,7 +133,7 @@ export class AppUpdateService {
    */
   static isStandalone(): boolean {
     return window.matchMedia('(display-mode: standalone)').matches ||
-           (window.navigator as any).standalone === true;
+      (window.navigator as any).standalone === true;
   }
 }
 

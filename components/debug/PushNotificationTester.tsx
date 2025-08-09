@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { subscribeUser, getNotificationPermissionStatus, sendNotification } from '../../services/notificationService';
-import { supabase } from '../../services/supabase';
+// Supabase removed - using PostgreSQL API
 import Button from '../Button';
 
 const PushNotificationTester: React.FC = () => {

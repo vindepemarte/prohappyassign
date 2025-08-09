@@ -1,4 +1,4 @@
-import { supabase } from '../services/supabase';
+import { projectsApi } from '../services/apiService';
 import { Project, Profile } from '../types';
 import { projectCache, userCache, analyticsCache } from './cacheManager';
 import { performanceMonitor } from './performanceMonitor';

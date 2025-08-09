@@ -2,7 +2,6 @@ import React from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import Logo from '../Logo';
 import Button from '../Button';
-import NotificationManager from './NotificationManager';
 import NotificationBell from '../notifications/NotificationBell';
 
 interface DashboardLayoutProps {
@@ -51,7 +50,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, title }) =>
           </div>
         </div>
       </main>
-      <NotificationManager />
     </div>
   );
 };

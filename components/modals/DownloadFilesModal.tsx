@@ -45,7 +45,7 @@ const DownloadFilesModal: React.FC<ModalProps> = ({ isOpen, onClose, projectId }
     const handleDownload = async (file: ProjectFile) => {
         setDownloading(prev => ({ ...prev, [file.id]: true }));
         try {
-            const blob = await downloadFile(file.file_path);
+            const blob = await downloadFile(file.id);
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.style.display = 'none';

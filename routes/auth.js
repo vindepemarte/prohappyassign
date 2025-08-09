@@ -9,11 +9,28 @@ const router = express.Router();
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: false, // Disable SSL for local development
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const BCRYPT_ROUNDS = parseInt(process.env.BCRYPT_ROUNDS || '12');
+
+// Middleware to verify JWT token
+const authenticateToken = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    return res.status(403).json({ error: 'Invalid or expired token' });
+  }
+};
 
 // Helper functions
 const hashPassword = async (password) => {
@@ -184,6 +201,31 @@ router.post('/logout', async (req, res) => {
   } catch (error) {
     console.error('Logout error:', error);
     res.status(500).json({ error: 'Logout failed' });
+  }
+});
+
+// Search users endpoint
+router.get('/users/search', authenticateToken, async (req, res) => {
+  try {
+    const { q: searchTerm } = req.query;
+    
+    if (!searchTerm || searchTerm.length < 2) {
+      return res.json({ data: [] });
+    }
+
+    const result = await pool.query(
+      `SELECT id, full_name, email, role 
+       FROM users 
+       WHERE full_name ILIKE $1 OR email ILIKE $1 OR id::text ILIKE $1
+       ORDER BY full_name
+       LIMIT 10`,
+      [`%${searchTerm}%`]
+    );
+
+    res.json({ data: result.rows });
+  } catch (error) {
+    console.error('User search error:', error);
+    res.status(500).json({ error: 'Failed to search users' });
   }
 });
 

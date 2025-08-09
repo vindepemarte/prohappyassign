@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { UserRole } from '../../types';
-import WorkflowNotificationService from '../../services/workflowNotificationService';
+import { sendNotification } from '../../services/notificationService';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../services/supabase';
+// Supabase removed - using PostgreSQL API
 import Button from '../Button';
 
 const AgentBroadcastNotifications: React.FC = () => {
@@ -41,21 +41,23 @@ const AgentBroadcastNotifications: React.FC = () => {
     try {
       console.log('Searching for users with term:', searchTerm);
       
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, role')
-        .or(`full_name.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`)
-        .limit(10);
+      const response = await fetch(`/api/auth/users/search?q=${encodeURIComponent(searchTerm)}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (error) {
-        console.error('Error searching users:', error);
+      if (!response.ok) {
+        console.error('Error searching users:', response.statusText);
         return;
       }
 
-      console.log('Search results:', data);
+      const result = await response.json();
+      console.log('Search results:', result.data);
 
-      if (data) {
-        setUserSearchResults(data.map(u => ({
+      if (result.data) {
+        setUserSearchResults(result.data.map((u: any) => ({
           id: u.id,
           name: u.full_name || 'Unknown User',
           role: u.role
@@ -93,24 +95,29 @@ const AgentBroadcastNotifications: React.FC = () => {
 
     try {
       if (targetType === 'roles') {
-        await WorkflowNotificationService.sendBroadcastNotification(
-          title.trim(),
-          message.trim(),
-          selectedRoles,
-          user.id
-        );
+        // Send to all selected roles
+        for (const role of selectedRoles) {
+          await sendNotification({
+            target: { role: role as any },
+            payload: {
+              title: title.trim(),
+              body: message.trim()
+            }
+          });
+        }
         setResult({ 
           type: 'success', 
           message: `Broadcast sent successfully to ${selectedRoles.length} role(s)!` 
         });
       } else {
         // Send to specific user
-        await WorkflowNotificationService.sendNotificationToSpecificUser(
-          specificUserId,
-          title.trim(),
-          message.trim(),
-          user.id
-        );
+        await sendNotification({
+          target: { userIds: [specificUserId] },
+          payload: {
+            title: title.trim(),
+            body: message.trim()
+          }
+        });
         setResult({ 
           type: 'success', 
           message: `Notification sent successfully to ${specificUserName}!` 

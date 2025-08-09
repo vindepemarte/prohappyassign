@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../../services/supabase';
+import { useAuth } from '../../hooks/useAuth';
 import Button from '../Button';
 import Input from '../Input';
 import { COLORS } from '../../constants';
@@ -12,6 +12,7 @@ const Register: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
+    const { register } = useAuth();
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -19,21 +20,9 @@ const Register: React.FC = () => {
         setError('');
         setMessage('');
 
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                data: {
-                    full_name: fullName,
-                },
-            },
-        });
-
-        if (error) {
-            setError(error.message);
-        } else if (data.user) {
-            // The profile is now created automatically by a database trigger.
-            setMessage('Registration successful! Please check your email to verify your account.');
+        try {
+            await register(email, password, fullName);
+            setMessage('Registration successful! You can now log in.');
 
             // Notify agents about the new registration.
             sendNotification({
@@ -43,6 +32,8 @@ const Register: React.FC = () => {
                     body: `A new user, ${fullName || email}, has just signed up.`,
                 },
             }).catch(err => console.error("Failed to send new user notification:", err));
+        } catch (error: any) {
+            setError(error.message);
         }
         
         setLoading(false);

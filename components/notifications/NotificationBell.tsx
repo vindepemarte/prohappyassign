@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../hooks/useAuth';
-import { supabase } from '../../services/supabase';
+import { notificationsApi } from '../../services/apiService';
 
 interface Notification {
-  id: number;
+  id: string | number; // API returns string, but we handle both
   user_id: string;
   title: string;
   body: string;
@@ -15,7 +15,7 @@ interface Notification {
 // Individual Notification Item Component
 const NotificationItem: React.FC<{
   notification: Notification;
-  onMarkAsRead: (id: number) => void;
+  onMarkAsRead: (id: string | number) => void;
 }> = ({ notification, onMarkAsRead }) => {
   const isUnread = notification.is_read === false || notification.is_read === undefined;
   
@@ -115,47 +115,13 @@ const NotificationBell: React.FC = () => {
     if (user) {
       fetchNotifications();
       // Set up real-time subscription for new notifications
-      const subscription = supabase
-        .channel('notifications')
-        .on('postgres_changes', 
-          { 
-            event: 'INSERT', 
-            schema: 'public', 
-            table: 'notification_history',
-            filter: `user_id=eq.${user.id}`
-          }, 
-          (payload) => {
-            console.log('New notification received:', payload);
-            const newNotification = payload.new as Notification;
-            setNotifications(prev => [newNotification, ...prev]);
-            setUnreadCount(prev => prev + 1);
-          }
-        )
-        .on('postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'notification_history',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            console.log('Notification updated:', payload);
-            const updatedNotification = payload.new as Notification;
-            setNotifications(prev => 
-              prev.map(n => n.id === updatedNotification.id ? updatedNotification : n)
-            );
-            // Recalculate unread count
-            setNotifications(current => {
-              const unreadCount = current.filter(n => n.is_read === false || n.is_read === undefined).length;
-              setUnreadCount(unreadCount);
-              return current;
-            });
-          }
-        )
-        .subscribe();
+      // Set up polling for new notifications (replacing real-time subscription)
+      const pollInterval = setInterval(() => {
+        fetchNotifications();
+      }, 30000); // Poll every 30 seconds
 
       return () => {
-        subscription.unsubscribe();
+        clearInterval(pollInterval);
       };
     }
   }, [user]);
@@ -176,18 +142,13 @@ const NotificationBell: React.FC = () => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('notification_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      setNotifications(data || []);
-      // Handle case where is_read column might not exist yet
-      setUnreadCount(data?.filter(n => n.is_read === false || n.is_read === undefined).length || 0);
+      const response = await notificationsApi.getHistory(user.id, 50);
+      
+      if (response.data) {
+        setNotifications(response.data);
+        // Handle case where is_read column might not exist yet
+        setUnreadCount(response.data.filter(n => n.is_read === false || n.is_read === undefined).length || 0);
+      }
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -195,28 +156,27 @@ const NotificationBell: React.FC = () => {
     }
   };
 
-  const markAsRead = async (notificationId: number) => {
+  const markAsRead = async (notificationId: string | number) => {
     try {
-      const { error } = await supabase
-        .from('notification_history')
-        .update({ is_read: true })
-        .eq('id', notificationId);
+      // Convert to number for API call
+      const numericId = typeof notificationId === 'string' ? parseInt(notificationId) : notificationId;
+      await notificationsApi.updateStatus(numericId, { is_read: true });
 
-      if (error) {
-        console.error('Error marking notification as read:', error);
-        // If is_read column doesn't exist, just update locally
-        if (error.message?.includes('column "is_read" does not exist')) {
-          console.warn('is_read column does not exist yet. Please run the database migration.');
-        }
-        return;
-      }
-
+      // Update local state immediately for better UX
       setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, is_read: true } : n)
+        prev.map(n => String(n.id) === String(notificationId) ? { ...n, is_read: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // Refresh from server to ensure consistency
+      setTimeout(() => fetchNotifications(), 100);
     } catch (error) {
       console.error('Error marking notification as read:', error);
+      // If API fails, just update locally
+      setNotifications(prev => 
+        prev.map(n => String(n.id) === String(notificationId) ? { ...n, is_read: true } : n)
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
     }
   };
 
@@ -224,25 +184,28 @@ const NotificationBell: React.FC = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('notification_history')
-        .update({ is_read: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-
-      if (error) {
-        console.error('Error marking all notifications as read:', error);
-        // If is_read column doesn't exist, just update locally
-        if (error.message?.includes('column "is_read" does not exist')) {
-          console.warn('is_read column does not exist yet. Please run the database migration.');
-        }
-        return;
-      }
-
+      // Get all unread notifications
+      const unreadNotifications = notifications.filter(n => n.is_read === false || n.is_read === undefined);
+      
+      // Mark each unread notification as read
+      const promises = unreadNotifications.map(notification => {
+        const numericId = typeof notification.id === 'string' ? parseInt(notification.id) : notification.id;
+        return notificationsApi.updateStatus(numericId, { is_read: true });
+      });
+      
+      await Promise.all(promises);
+      
+      // Update local state
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setUnreadCount(0);
+      
+      // Refresh from server to ensure consistency
+      setTimeout(() => fetchNotifications(), 100);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
+      // If API fails, just update locally
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
     }
   };
 

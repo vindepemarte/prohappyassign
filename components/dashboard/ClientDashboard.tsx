@@ -28,10 +28,10 @@ const ClientDashboard: React.FC = () => {
                         </p>
                         <div className="mt-3 p-3 bg-blue-100 rounded-lg border border-blue-300">
                             <p className="text-blue-800 font-semibold">
-                                Reference Format: <span className="font-mono bg-white px-2 py-1 rounded">[Month] + [Order Number]</span>
+                                Reference Format: <span className="font-mono bg-white px-2 py-1 rounded">[Year] + [Order Number]</span>
                             </p>
                             <p className="text-blue-700 text-sm mt-2">
-                                <strong>Example:</strong> For August order #648476, use reference: <span className="font-mono bg-white px-1 rounded">08-648476</span>
+                                <strong>Example:</strong> For 2025 order #476, use reference: <span className="font-mono bg-white px-1 rounded">25-476</span>
                             </p>
                         </div>
                     </div>
