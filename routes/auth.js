@@ -115,6 +115,12 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// Test route to verify auth routing is working
+router.get('/test', (req, res) => {
+  console.log('🧪 Auth test route hit');
+  res.json({ message: 'Auth routes are working', timestamp: new Date().toISOString() });
+});
+
 // Login user
 router.post('/login', async (req, res) => {
   try {

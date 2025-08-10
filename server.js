@@ -110,13 +110,22 @@ try {
   const { default: userRoutes } = await import('./routes/users.js');
   console.log('✅ All routes loaded successfully');
   
-  // API routes
-  app.use('/api/auth', authRoutes);
+  // API routes with debugging
+  console.log('🔧 Mounting API routes...');
+  app.use('/api/auth', (req, res, next) => {
+    console.log(`🔐 Auth route: ${req.method} ${req.url}`);
+    next();
+  }, authRoutes);
+  
   app.use('/api/projects', projectRoutes);
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/files', fileRoutes);
   app.use('/api/users', userRoutes);
   console.log('✅ All routes mounted successfully');
+  
+  // Test that auth routes are working
+  console.log('🧪 Testing auth route mounting...');
+  console.log('Auth routes should be available at: /api/auth/login, /api/auth/register, /api/auth/me');
   
   // Catch-all handler for unmatched API routes
   app.use('/api/*', (req, res) => {
@@ -219,8 +228,18 @@ app.get('/api/test', (req, res) => {
   });
 });
 
-// SPA fallback - serve index.html for all other routes
+// SPA fallback - serve index.html for all other routes (but NOT API routes)
 app.get('*', (req, res) => {
+  // CRITICAL: Don't serve SPA for API routes
+  if (req.url.startsWith('/api/')) {
+    console.log('❌ API route hit SPA fallback - this should not happen:', req.url);
+    return res.status(404).json({ 
+      error: 'API endpoint not found',
+      path: req.url,
+      method: req.method
+    });
+  }
+
   const indexPath = path.join(__dirname, 'dist', 'index.html');
 
   console.log('Fallback route hit for:', req.url);
