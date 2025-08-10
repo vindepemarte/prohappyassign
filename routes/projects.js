@@ -1,7 +1,7 @@
 import express from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
-import { PricingCalculator } from '../services/pricingCalculator.ts';
+import { PricingCalculator } from '../services/pricingCalculator.js';
 
 const router = express.Router();
 
