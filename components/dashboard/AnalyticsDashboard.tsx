@@ -2,7 +2,6 @@ import React, { useMemo, useEffect, useState } from 'react';
 import { Project } from '../../types';
 import { TimeFilter } from '../common/FilterBar';
 import { ProfitCalculator } from '../../utils/profitCalculator';
-import { queryOptimizer } from '../../utils/queryOptimizer';
 // Supabase removed - using PostgreSQL API
 // Removed unused imports - LoadingWrapper and useLoadingState
 
@@ -30,17 +29,26 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ projects, timeF
     const fetchClientNames = async () => {
       const uniqueClientIds = [...new Set(projects.map(p => p.client_id))];
       if (uniqueClientIds.length > 0) {
-        const { data: clientsData, error } = await supabase
-          .from('users')
-          .select('id, full_name')
-          .in('id', uniqueClientIds);
+        try {
+          const response = await fetch('/api/users/by-ids', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            },
+            body: JSON.stringify({ userIds: uniqueClientIds })
+          });
 
-        if (!error && clientsData) {
-          const clientNamesMap = clientsData.reduce((acc, client) => {
-            acc[client.id] = client.full_name || 'Unknown Client';
-            return acc;
-          }, {} as Record<string, string>);
-          setClientNames(clientNamesMap);
+          if (response.ok) {
+            const clientsData = await response.json();
+            const clientNamesMap = clientsData.reduce((acc: Record<string, string>, client: any) => {
+              acc[client.id] = client.full_name || 'Unknown Client';
+              return acc;
+            }, {} as Record<string, string>);
+            setClientNames(clientNamesMap);
+          }
+        } catch (error) {
+          console.error('Error fetching client names:', error);
         }
       }
     };

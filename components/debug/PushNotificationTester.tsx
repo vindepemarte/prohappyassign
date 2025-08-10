@@ -68,18 +68,23 @@ const PushNotificationTester: React.FC = () => {
         
         // Also manually add to notification_history to ensure it appears in the bell
         try {
-          const { error: dbError } = await supabase
-            .from('notification_history')
-            .insert({
+          const response = await fetch('/api/notifications', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            },
+            body: JSON.stringify({
               user_id: user.id,
               title: '🧪 Test Notification',
               body: 'This is a test push notification from ProHappy!',
               delivery_status: 'sent',
               is_read: false
-            });
+            })
+          });
             
-          if (dbError) {
-            console.error('Error logging test notification to database:', dbError);
+          if (!response.ok) {
+            console.error('Error logging test notification to database');
           } else {
             console.log('Test notification logged to database successfully');
           }

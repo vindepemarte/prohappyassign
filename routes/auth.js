@@ -119,6 +119,9 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt for:', req.body.email);
+    console.log('🔍 Request method:', req.method);
+    console.log('🔍 Request headers:', req.headers);
+    
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -237,6 +240,16 @@ router.get('/users/search', authenticateToken, async (req, res) => {
     console.error('User search error:', error);
     res.status(500).json({ error: 'Failed to search users' });
   }
+});
+
+// Catch-all handler for unmatched auth routes
+router.use('*', (req, res) => {
+  console.log(`❌ Unmatched auth route: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ 
+    error: 'Auth endpoint not found',
+    method: req.method,
+    path: req.originalUrl
+  });
 });
 
 export default router;

@@ -21,7 +21,7 @@ import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
 import { ProfitCalculator } from '../../utils/profitCalculator';
 import AnalyticsDashboard from './AnalyticsDashboard';
 import { useRobustLoading } from '../../hooks/useRobustLoading';
-import { performanceMonitor } from '../../utils/performanceMonitor';
+
 import { usersApi } from '../../services/apiService';
 // Supabase removed - using PostgreSQL API
 
@@ -180,13 +180,10 @@ const AgentDashboard: React.FC = () => {
         try {
             loadingActions.startLoading();
 
-            const [projectsData, workersData] = await performanceMonitor.measure(
-                'agent-data-fetch',
-                () => Promise.all([
-                    getAllProjectsForAgent(),
-                    getAllWorkers()
-                ])
-            );
+            const [projectsData, workersData] = await Promise.all([
+                getAllProjectsForAgent(),
+                getAllWorkers()
+            ]);
 
             setProjects(projectsData);
             setWorkers(workersData);

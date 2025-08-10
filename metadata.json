@@ -1,6 +1,0 @@
-{
-  "name": "ProHappyAssignments",
-  "description": "An application for assignment assistance in the UK, designed with a friendly and modern user interface. Users can submit new assignment requests, request changes, or submit completed work.",
-  "requestFramePermissions": [],
-  "prompt": "The application now includes a full push notification system using a Supabase Edge Function. For this to work, you MUST generate your own VAPID keys. You can use an online generator or the `web-push` CLI. \n\n1.  **Generate Keys:** `npx web-push generate-vapid-keys` \n2.  **Update Public Key:** Replace the placeholder `VAPID_PUBLIC_KEY` in `services/notificationService.ts` with your new public key. \n3.  **Set Supabase Secrets:** In your Supabase project dashboard (under Project Settings > Edge Functions), add two secrets: `VAPID_PUBLIC_KEY` (your public key) and `VAPID_PRIVATE_KEY` (your private key). \n\nThis is a critical step for the feature to function."
-}

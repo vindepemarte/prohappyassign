@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Complete deployment script for ProHappyAssignments
-# This handles both the main app (via Coolify) and Supabase edge functions
+# This handles the main app deployment via Coolify
 
 set -e  # Exit on any error
 
-echo "🚀 Starting complete deployment process..."
+echo "🚀 Starting deployment process..."
 
 # Colors for output
 RED='\033[0;31m'
@@ -35,46 +35,26 @@ print_error() {
 check_dependencies() {
     print_status "Checking dependencies..."
     
-    if ! command -v supabase &> /dev/null; then
-        print_error "Supabase CLI not found. Installing..."
-        npm install -g supabase
-    fi
-    
     if ! command -v git &> /dev/null; then
         print_error "Git not found. Please install Git."
+        exit 1
+    fi
+    
+    if ! command -v node &> /dev/null; then
+        print_error "Node.js not found. Please install Node.js."
         exit 1
     fi
     
     print_success "Dependencies check passed"
 }
 
-# Deploy edge functions to Supabase
-deploy_edge_functions() {
-    print_status "Deploying Supabase edge functions..."
-    
-    # Check if we're linked to a Supabase project
-    if [ ! -f ".supabase/config.toml" ]; then
-        print_warning "Not linked to Supabase project. Please run 'supabase link' first."
-        print_status "You can link with: supabase link --project-ref YOUR_PROJECT_REF"
-        return 1
-    fi
-    
-    # Deploy the edge function
-    if supabase functions deploy send-push-notification; then
-        print_success "Edge function deployed successfully"
-    else
-        print_error "Failed to deploy edge function"
-        return 1
-    fi
-}
-
 # Run database migrations/setup
 setup_database() {
-    print_status "Setting up database tables..."
+    print_status "Database setup..."
     
     if [ -f "fix-notification-table.sql" ]; then
         print_status "Found notification table setup script"
-        print_warning "Please run fix-notification-table.sql in your Supabase SQL editor manually"
+        print_warning "Please run fix-notification-table.sql in your PostgreSQL database manually"
         print_status "SQL file location: $(pwd)/fix-notification-table.sql"
     fi
 }
@@ -122,13 +102,15 @@ show_checklist() {
     print_status "Deployment complete! Please verify the following:"
     echo ""
     echo "📋 Post-Deployment Checklist:"
-    echo "  □ Run fix-notification-table.sql in Supabase SQL editor"
-    echo "  □ Set VAPID keys in Supabase Edge Functions settings:"
+    echo "  □ Run fix-notification-table.sql in your PostgreSQL database"
+    echo "  □ Set environment variables in Coolify:"
+    echo "    - DATABASE_URL"
+    echo "    - JWT_SECRET"
     echo "    - VAPID_PUBLIC_KEY"
     echo "    - VAPID_PRIVATE_KEY"
     echo "  □ Verify Coolify deployment completed successfully"
     echo "  □ Test application functionality"
-    echo "  □ Test notifications system"
+    echo "  □ Test authentication system"
     echo ""
     echo "🔧 Generate VAPID keys with:"
     echo "  npx web-push generate-vapid-keys"
@@ -138,8 +120,8 @@ show_checklist() {
 
 # Main deployment process
 main() {
-    echo "🎯 ProHappyAssignments Complete Deployment"
-    echo "========================================"
+    echo "🎯 ProHappyAssignments Deployment"
+    echo "================================"
     
     check_dependencies
     
@@ -148,13 +130,6 @@ main() {
         print_error "Build failed. Aborting deployment."
         exit 1
     }
-    
-    # Deploy edge functions
-    if deploy_edge_functions; then
-        print_success "Edge functions deployed"
-    else
-        print_warning "Edge function deployment failed. Continuing with main app deployment..."
-    fi
     
     # Setup database
     setup_database

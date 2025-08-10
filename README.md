@@ -13,7 +13,8 @@ An application for assignment assistance in the UK, designed with a friendly and
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
+- **Backend**: Express.js with PostgreSQL
+- **Authentication**: JWT-based authentication
 - **Build Tool**: Vite
 - **Deployment**: Docker, Coolify
 
@@ -27,7 +28,10 @@ An application for assignment assistance in the UK, designed with a friendly and
 2. **Set up environment variables**:
    Create a `.env.local` file with:
    ```
+   DATABASE_URL=postgresql://user:password@host:port/database
+   JWT_SECRET=your_jwt_secret_key
    GEMINI_API_KEY=your_gemini_api_key
+   BCRYPT_ROUNDS=12
    ```
 
 3. **Run development server**:
@@ -56,15 +60,15 @@ docker run -p 3000:3000 -e GEMINI_API_KEY=your_key prohappyassignments
 
 ## Configuration
 
-### Supabase Setup
-1. Create a new Supabase project
-2. Update `services/supabase.ts` with your project URL and anon key
-3. Deploy the edge functions in `supabase/functions/`
+### Database Setup
+1. Set up a PostgreSQL database
+2. Update the `DATABASE_URL` environment variable
+3. Run database migrations if needed
 
 ### Push Notifications
 1. Generate VAPID keys: `npx web-push generate-vapid-keys`
 2. Update `services/notificationService.ts` with your public key
-3. Add VAPID keys to your Supabase edge function environment
+3. Add VAPID keys to your environment variables
 
 ## Project Structure
 
@@ -76,7 +80,7 @@ docker run -p 3000:3000 -e GEMINI_API_KEY=your_key prohappyassignments
 ├── contexts/           # React contexts
 ├── hooks/              # Custom hooks
 ├── services/           # API services
-├── supabase/           # Supabase edge functions
+├── routes/             # Express.js API routes
 └── types.ts            # TypeScript type definitions
 ```
 

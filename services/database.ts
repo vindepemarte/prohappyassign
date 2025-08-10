@@ -1,22 +1,55 @@
 import { Pool, PoolClient } from 'pg';
 
-// Database connection pool
+// Enhanced database connection pool configuration
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000, // Increased timeout for production
+  acquireTimeoutMillis: 60000,
+  createTimeoutMillis: 30000,
+  destroyTimeoutMillis: 5000,
+  reapIntervalMillis: 1000,
+  createRetryIntervalMillis: 200,
 });
 
 // Test database connection
-pool.on('connect', () => {
+pool.on('connect', (client) => {
   console.log('✅ Connected to PostgreSQL database');
+  console.log('🔍 Database connection info:', {
+    host: client.host,
+    port: client.port,
+    database: client.database,
+    user: client.user
+  });
 });
 
 pool.on('error', (err) => {
   console.error('❌ Unexpected error on idle client', err);
+  console.error('❌ Database connection details:', {
+    host: err.host,
+    port: err.port,
+    database: err.database
+  });
 });
+
+// Test initial connection
+const testConnection = async () => {
+  try {
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    console.log('✅ Database connection test successful:', result.rows[0]);
+    client.release();
+    return true;
+  } catch (error) {
+    console.error('❌ Database connection test failed:', error);
+    return false;
+  }
+};
+
+// Test connection on startup
+testConnection();
 
 // Helper function to execute queries
 export const query = async (text: string, params?: any[]): Promise<any> => {
@@ -59,5 +92,6 @@ export default {
   query,
   getClient,
   transaction,
-  pool
+  pool,
+  testConnection
 };

@@ -13,7 +13,7 @@ import StatusBadge from '../common/StatusBadge';
 import useFilterState from '../../hooks/useFilterState';
 import { EarningsCalculator, WorkerEarnings } from '../../utils/earningsCalculator';
 import { useRobustLoading } from '../../hooks/useRobustLoading';
-import { performanceMonitor } from '../../utils/performanceMonitor';
+
 
 // StatusBadge component moved to components/common/StatusBadge.tsx
 
@@ -47,11 +47,7 @@ const WorkerDashboard: React.FC = () => {
         try {
             loadingActions.startLoading();
 
-            const data = await performanceMonitor.measure(
-                'worker-projects-fetch',
-                () => getProjectsForWorker(user.id),
-                { userId: user.id }
-            );
+            const data = await getProjectsForWorker(user.id);
 
             setProjects(data);
             loadingActions.stopLoading();

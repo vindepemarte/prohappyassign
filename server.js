@@ -11,13 +11,28 @@ dotenv.config({ path: '.env.local' }); // For local development
 dotenv.config(); // For .env file
 // Environment variables set directly in the system (like Coolify) will override these
 
-// Debug environment variables
+// Enhanced environment variable validation
 console.log('🔍 Environment check:');
 console.log('NODE_ENV:', process.env.NODE_ENV || 'not set');
 console.log('PORT:', process.env.PORT || 'not set');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'set' : 'NOT SET');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'set' : 'NOT SET');
 console.log('BCRYPT_ROUNDS:', process.env.BCRYPT_ROUNDS || 'not set (will use default 12)');
+console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'not set (will use fallback)');
+
+// Validate critical environment variables
+const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingEnvVars);
+  console.error('📋 Please check PRODUCTION_ENV_SETUP.md for configuration guide');
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+} else {
+  console.log('✅ All required environment variables are set');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,12 +47,54 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false,
 }));
 
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? (process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['https://prohappya.uk']) // Use env var or fallback
-    : ['http://localhost:3000', 'http://localhost:5432', 'http://127.0.0.1:3000'],
-  credentials: true
-}));
+// Enhanced CORS configuration for production deployment
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? [
+          process.env.FRONTEND_URL,
+          'https://prohappya.uk',
+          'https://www.prohappya.uk',
+          // Add your actual Coolify domain here
+          origin // Allow same-origin requests in production
+        ].filter(Boolean)
+      : [
+          'http://localhost:3000',
+          'http://localhost:5432', 
+          'http://127.0.0.1:3000',
+          'http://localhost:5173', // Vite dev server
+          origin // Allow any origin in development
+        ];
+
+    console.log('🔍 CORS check - Origin:', origin, 'Allowed:', allowedOrigins);
+    
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      console.warn('❌ CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests explicitly
+app.options('*', (req, res) => {
+  console.log('🔄 Preflight request for:', req.url);
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
@@ -60,14 +117,28 @@ try {
   app.use('/api/files', fileRoutes);
   app.use('/api/users', userRoutes);
   console.log('✅ All routes mounted successfully');
+  
+  // Catch-all handler for unmatched API routes
+  app.use('/api/*', (req, res) => {
+    console.log(`❌ Unmatched API route: ${req.method} ${req.url}`);
+    res.status(404).json({ 
+      error: 'API endpoint not found',
+      method: req.method,
+      path: req.url
+    });
+  });
 } catch (error) {
   console.error('❌ Failed to load routes:', error);
   process.exit(1);
 }
 
-// Add request logging
+// Add request logging and debugging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('Body:', JSON.stringify(req.body, null, 2));
+  }
   next();
 });
 

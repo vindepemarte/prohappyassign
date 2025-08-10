@@ -1,47 +1,10 @@
-name: Deploy to Coolify and Supabase
+name: Deploy to Coolify
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
-jobs:
-  deploy-edge-functions:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-    
-    - name: Install Supabase CLI
-      run: npm install -g supabase
-    
-    - name: Deploy Edge Functions
-      env:
-        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
-      run: |
-        # Link to Supabase project
-        supabase link --project-ref $SUPABASE_PROJECT_REF
-        
-        # Deploy edge functions
-        supabase functions deploy send-push-notification
-        
-    - name: Notify deployment status
-      if: always()
-      run: |
-        if [ ${{ job.status }} == 'success' ]; then
-          echo "✅ Edge functions deployed successfully"
-        else
-          echo "❌ Edge function deployment failed"
-        fi
 
   build-and-test:
     runs-on: ubuntu-latest
