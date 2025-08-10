@@ -1,0 +1,7 @@
+{
+  "type": "nodejs",
+  "buildCommand": "npm run build",
+  "startCommand": "node server.js",
+  "port": 3000,
+  "healthCheck": "/health"
+}

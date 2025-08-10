@@ -91,13 +91,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
 
       let data;
+      const responseText = await response.text();
+      console.log('🔍 Raw response text:', responseText);
+      
       try {
-        data = await response.json();
+        data = JSON.parse(responseText);
       } catch (jsonError) {
         console.error('❌ Failed to parse JSON response:', jsonError);
-        const textResponse = await response.text();
-        console.error('❌ Raw response:', textResponse);
-        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+        console.error('❌ Raw response:', responseText);
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}. Response: ${responseText.substring(0, 200)}`);
       }
 
       if (!response.ok) {
