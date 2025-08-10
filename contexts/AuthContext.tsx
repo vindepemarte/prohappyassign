@@ -76,6 +76,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Login function
   const login = async (email: string, password: string) => {
     try {
+      console.log('🔍 Making login request to:', `${API_BASE}/login`);
+      console.log('🔍 Full URL:', window.location.origin + `${API_BASE}/login`);
+      
       const response = await fetch(`${API_BASE}/login`, {
         method: 'POST',
         headers: {
@@ -84,7 +87,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      console.log('🔍 Response status:', response.status);
+      console.log('🔍 Response headers:', Object.fromEntries(response.headers.entries()));
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error('❌ Failed to parse JSON response:', jsonError);
+        const textResponse = await response.text();
+        console.error('❌ Raw response:', textResponse);
+        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+      }
 
       if (!response.ok) {
         throw new Error(data.error || 'Login failed');
