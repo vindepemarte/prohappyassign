@@ -47,6 +47,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/server.js ./
 COPY --from=builder /app/routes ./routes
 COPY --from=builder /app/services ./services
+COPY --from=builder /app/constants.js ./
 COPY --from=builder /app/types.ts ./
 
 # Create uploads directory for file uploads
