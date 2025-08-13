@@ -9,7 +9,7 @@ const router = express.Router();
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+  ssl: false,
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -313,6 +313,29 @@ router.post('/register', async (req, res) => {
 router.get('/test', (req, res) => {
   console.log('🧪 Auth test route hit');
   res.json({ message: 'Auth routes are working', timestamp: new Date().toISOString() });
+});
+
+// Debug endpoint to check database
+router.get('/debug', async (req, res) => {
+  try {
+    const userCount = await pool.query('SELECT COUNT(*) as count FROM users');
+    const refCodeCount = await pool.query('SELECT COUNT(*) as count FROM reference_codes');
+    
+    res.json({
+      success: true,
+      database: 'connected',
+      users: userCount.rows[0].count,
+      reference_codes: refCodeCount.rows[0].count,
+      environment: process.env.NODE_ENV,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      code: error.code
+    });
+  }
 });
 
 // Login user
