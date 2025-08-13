@@ -58,11 +58,14 @@ const corsOptions = {
           process.env.FRONTEND_URL,
           'https://prohappya.uk',
           'https://www.prohappya.uk',
-          // Add your actual Coolify domain here
-          origin // Allow same-origin requests in production
+          'https://prohappyassignments.com',
+          'https://www.prohappyassignments.com',
+          // Allow same-origin requests (when frontend and backend are on same domain)
+          origin
         ].filter(Boolean)
       : [
           'http://localhost:3000',
+          'http://localhost:3001',
           'http://localhost:5432', 
           'http://127.0.0.1:3000',
           'http://localhost:5173', // Vite dev server
@@ -71,7 +74,8 @@ const corsOptions = {
 
     console.log('🔍 CORS check - Origin:', origin, 'Allowed:', allowedOrigins);
     
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    // In production, be more permissive for same-origin requests
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production' || !origin) {
       callback(null, true);
     } else {
       console.warn('❌ CORS blocked origin:', origin);

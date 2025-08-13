@@ -49,6 +49,7 @@ COPY --from=builder /app/routes ./routes
 COPY --from=builder /app/services ./services
 COPY --from=builder /app/middleware ./middleware
 COPY --from=builder /app/utils ./utils
+COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/constants.js ./
 COPY --from=builder /app/types.ts ./
 
@@ -71,5 +72,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the Express.js server
-CMD ["node", "server.js"]
+# Start with production setup script in production, regular server otherwise
+CMD ["sh", "-c", "if [ \"$NODE_ENV\" = \"production\" ]; then node scripts/production-start.js; else node server.js; fi"]

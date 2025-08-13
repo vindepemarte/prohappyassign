@@ -24,7 +24,10 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE = '/api/auth';
+// Use the correct API base URL based on environment
+const API_BASE = process.env.NODE_ENV === 'development' 
+  ? '/api/auth'  // Use relative URL in development (proxy will handle it)
+  : '/api/auth'; // Use relative URL in production too
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
