@@ -17,7 +17,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, full_name: string, role?: 'client' | 'worker' | 'agent') => Promise<void>;
+  register: (email: string, password: string, full_name: string, reference_code?: string, role?: 'client' | 'worker' | 'agent') => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<Pick<User, 'full_name' | 'avatar_url'>>) => Promise<void>;
 }
@@ -119,14 +119,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Register function
-  const register = async (email: string, password: string, full_name: string, role: 'client' | 'worker' | 'agent' = 'client') => {
+  const register = async (email: string, password: string, full_name: string, reference_code?: string, role: 'client' | 'worker' | 'agent' = 'client') => {
     try {
+      const requestBody: any = { email, password, full_name, role };
+      if (reference_code) {
+        requestBody.reference_code = reference_code;
+      }
+
       const response = await fetch(`${API_BASE}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password, full_name, role }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();

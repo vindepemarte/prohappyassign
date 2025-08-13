@@ -9,6 +9,7 @@ const Register: React.FC = () => {
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [referenceCode, setReferenceCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
@@ -20,8 +21,15 @@ const Register: React.FC = () => {
         setError('');
         setMessage('');
 
+        // Validate reference code format
+        if (referenceCode && !/^[A-Z]{2}-[A-Z]{3}-[A-Z0-9]{6}$/.test(referenceCode)) {
+            setError('Reference code must be in format: XX-XXX-XXXXXX (e.g., SA-CLI-ABC123)');
+            setLoading(false);
+            return;
+        }
+
         try {
-            await register(email, password, fullName);
+            await register(email, password, fullName, referenceCode);
             setMessage('Registration successful! You can now log in.');
 
             // Notify agents about the new registration.
@@ -72,6 +80,23 @@ const Register: React.FC = () => {
                 minLength={6}
                 icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 1 1 0 000-2z" clipRule="evenodd" /></svg>}
             />
+            <Input
+                id="referenceCode"
+                name="referenceCode"
+                type="text"
+                placeholder="Reference Code (e.g., SA-CLI-ABC123)"
+                value={referenceCode}
+                onChange={(e) => setReferenceCode(e.target.value.toUpperCase())}
+                required
+                maxLength={14}
+                pattern="[A-Z]{2}-[A-Z]{3}-[A-Z0-9]{6}"
+                title="Reference code format: XX-XXX-XXXXXX"
+                style={{ fontFamily: 'monospace' }}
+                icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2a2 2 0 00-2 2m2-2V5a2 2 0 00-2-2H9a2 2 0 00-2 2v2M7 7a2 2 0 012-2m0 0a2 2 0 012 2m-2-2v2m0 0V9a2 2 0 002 2m-2-2a2 2 0 00-2-2" /></svg>}
+            />
+            <div className="text-xs text-gray-500 text-center">
+                Reference code provided by your agent or supervisor
+            </div>
             {error && <p className="text-center text-sm" style={{color: COLORS.red}}>{error}</p>}
             {message && <p className="text-center text-sm" style={{color: COLORS.success}}>{message}</p>}
             <div className="pt-2">
