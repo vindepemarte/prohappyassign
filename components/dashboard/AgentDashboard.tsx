@@ -219,7 +219,7 @@ const AgentDashboard: React.FC = () => {
             // Fetch only projects from assigned clients (limited scope)
             const response = await fetch('/api/permissions/accessible-projects', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -266,7 +266,7 @@ const AgentDashboard: React.FC = () => {
         try {
             const response = await fetch('/api/agent-pricing/current', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -293,7 +293,7 @@ const AgentDashboard: React.FC = () => {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: JSON.stringify(agentPricing)
             });

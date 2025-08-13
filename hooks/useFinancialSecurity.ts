@@ -39,7 +39,7 @@ export const useFinancialSecurity = () => {
     try {
       const response = await fetch('/api/financial-security/permissions', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
 
@@ -59,7 +59,7 @@ export const useFinancialSecurity = () => {
     try {
       const response = await fetch('/api/financial-security/summary', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
 
@@ -83,7 +83,7 @@ export const useFinancialSecurity = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({
           permission,
@@ -108,7 +108,7 @@ export const useFinancialSecurity = () => {
     try {
       const response = await fetch(`/api/financial-security/projects?limit=${limit}&offset=${offset}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
 
@@ -128,7 +128,7 @@ export const useFinancialSecurity = () => {
     try {
       const response = await fetch(`/api/financial-security/users?limit=${limit}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
 
@@ -148,7 +148,7 @@ export const useFinancialSecurity = () => {
     try {
       const response = await fetch(`/api/financial-security/projects/${projectId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
 
@@ -168,7 +168,7 @@ export const useFinancialSecurity = () => {
     try {
       const response = await fetch(`/api/financial-security/audit?limit=${limit}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
 

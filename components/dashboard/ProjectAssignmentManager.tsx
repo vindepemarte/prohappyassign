@@ -107,7 +107,7 @@ const ProjectAssignmentManager: React.FC<ProjectAssignmentManagerProps> = ({
     try {
       const response = await fetch(`/api/project-assignment/summary/${projectId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       
@@ -128,7 +128,7 @@ const ProjectAssignmentManager: React.FC<ProjectAssignmentManagerProps> = ({
     try {
       const response = await fetch(`/api/project-assignment/history/${projectId}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       
@@ -146,7 +146,7 @@ const ProjectAssignmentManager: React.FC<ProjectAssignmentManagerProps> = ({
     try {
       const response = await fetch(`/api/project-assignment/available-users/${assignmentType}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       
@@ -164,7 +164,7 @@ const ProjectAssignmentManager: React.FC<ProjectAssignmentManagerProps> = ({
     try {
       const response = await fetch(`/api/project-assignment/recommendations/${projectId}/${assignmentType}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       
@@ -193,7 +193,7 @@ const ProjectAssignmentManager: React.FC<ProjectAssignmentManagerProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({
           projectId,
@@ -230,7 +230,7 @@ const ProjectAssignmentManager: React.FC<ProjectAssignmentManagerProps> = ({
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({ projectNumbers })
       });

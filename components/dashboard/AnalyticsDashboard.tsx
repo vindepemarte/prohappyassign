@@ -31,7 +31,7 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ projects, timeF
       try {
         const response = await fetch('/api/agent-pricing/stats/current', {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
           }
         });
 

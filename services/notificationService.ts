@@ -300,7 +300,7 @@ export const getUserNotificationHistory = async (userId: string, limit = 50) => 
   try {
     const response = await fetch(`/api/notifications/history/${userId}?limit=${limit}`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
       }
     });
     
@@ -328,7 +328,7 @@ export const markNotificationAsRead = async (notificationId: string) => {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
       },
       body: JSON.stringify({
         is_read: true,

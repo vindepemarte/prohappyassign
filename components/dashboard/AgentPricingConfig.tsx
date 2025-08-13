@@ -113,7 +113,7 @@ const AgentPricingConfig: React.FC = () => {
     try {
       const response = await fetch('/api/agent-pricing/current', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       const data = await response.json();
@@ -132,7 +132,7 @@ const AgentPricingConfig: React.FC = () => {
     try {
       const response = await fetch('/api/agent-pricing/history/current', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       const data = await response.json();
@@ -149,7 +149,7 @@ const AgentPricingConfig: React.FC = () => {
     try {
       const response = await fetch('/api/agent-pricing/stats/current', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
       });
       const data = await response.json();
@@ -168,7 +168,7 @@ const AgentPricingConfig: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify(pricingData)
       });
@@ -191,7 +191,7 @@ const AgentPricingConfig: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify({ word_count: wordCount })
       });
@@ -226,7 +226,7 @@ const AgentPricingConfig: React.FC = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         },
         body: JSON.stringify(formData)
       });

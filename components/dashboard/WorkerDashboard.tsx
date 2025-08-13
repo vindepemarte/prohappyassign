@@ -50,7 +50,7 @@ const WorkerDashboard: React.FC = () => {
             // Fetch only projects assigned to this worker (worker_id or sub_worker_id)
             const response = await fetch('/api/permissions/accessible-projects', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -73,7 +73,7 @@ const WorkerDashboard: React.FC = () => {
         try {
             const response = await fetch(`/api/notifications/history/${user.id}?type=assignment`, {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 

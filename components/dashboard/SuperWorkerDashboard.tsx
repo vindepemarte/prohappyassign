@@ -83,7 +83,7 @@ const SuperWorkerDashboard: React.FC = () => {
             // Fetch projects available for assignment (Super Worker can see all projects in their hierarchy)
             const projectsResponse = await fetch('/api/permissions/accessible-projects', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -97,7 +97,7 @@ const SuperWorkerDashboard: React.FC = () => {
             // Fetch sub-workers (workers in the Super Worker's hierarchy)
             const hierarchyResponse = await fetch('/api/hierarchy/my-subordinates', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -109,7 +109,7 @@ const SuperWorkerDashboard: React.FC = () => {
                 // Fallback: get all workers if hierarchy endpoint fails
                 const workersResponse = await fetch('/api/users/by-role/worker', {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                     }
                 });
 
@@ -198,7 +198,7 @@ const SuperWorkerDashboard: React.FC = () => {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: JSON.stringify({ 
                     workerId,
@@ -232,7 +232,7 @@ const SuperWorkerDashboard: React.FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: JSON.stringify({
                     recipient_id: workerId,

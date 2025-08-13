@@ -187,7 +187,7 @@ const SuperAgentDashboard: React.FC = () => {
             // Fetch all accessible projects for super agent
             const projectsResponse = await fetch('/api/permissions/accessible-projects', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -201,7 +201,7 @@ const SuperAgentDashboard: React.FC = () => {
             // Fetch all workers and agents in the network
             const hierarchyResponse = await fetch('/api/hierarchy/super-agent-network', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -264,7 +264,7 @@ const SuperAgentDashboard: React.FC = () => {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: JSON.stringify({ projectId, status: newStatus })
             });
@@ -304,7 +304,7 @@ const SuperAgentDashboard: React.FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: JSON.stringify({ projectId, workerId })
             });

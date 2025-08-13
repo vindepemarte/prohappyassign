@@ -45,7 +45,7 @@ const SystemBroadcast: React.FC = () => {
         try {
             const response = await fetch('/api/notifications/broadcast-history', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -64,7 +64,7 @@ const SystemBroadcast: React.FC = () => {
         try {
             const response = await fetch('/api/hierarchy/overview', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -164,7 +164,7 @@ const SystemBroadcast: React.FC = () => {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: JSON.stringify(broadcastForm)
             });

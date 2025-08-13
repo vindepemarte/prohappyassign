@@ -48,7 +48,7 @@ const NewProjectForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubmit }
             // Get client's hierarchy info to find their assigned agent
             const hierarchyResponse = await fetch('/api/hierarchy/my-hierarchy', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -62,7 +62,7 @@ const NewProjectForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubmit }
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                         },
                         body: JSON.stringify({ userIds: [parentId] })
                     });
@@ -75,7 +75,7 @@ const NewProjectForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubmit }
                         // Get agent's pricing configuration
                         const pricingResponse = await fetch(`/api/agent-pricing/${parentId}`, {
                             headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                             }
                         });
 
@@ -195,7 +195,7 @@ const NewProjectForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubmit }
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
             },
             body: JSON.stringify(projectData)
         });
@@ -217,7 +217,7 @@ const NewProjectForm: React.FC<{ onFormSubmit: () => void }> = ({ onFormSubmit }
             const uploadResponse = await fetch(`/api/files/upload/${createdProject.data.id}`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: formDataFiles
             });

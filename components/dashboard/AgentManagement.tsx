@@ -57,7 +57,7 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ agents }) => {
                     try {
                         const pricingResponse = await fetch(`/api/agent-pricing/${agent.id}`, {
                             headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                             }
                         });
                         if (pricingResponse.ok) {
@@ -72,7 +72,7 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ agents }) => {
                     try {
                         const statsResponse = await fetch(`/api/agents/${agent.id}/stats`, {
                             headers: {
-                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                             }
                         });
                         if (statsResponse.ok) {
@@ -129,7 +129,7 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ agents }) => {
                 method: selectedAgent.pricing ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: JSON.stringify(pricingForm)
             });
@@ -157,7 +157,7 @@ const AgentManagement: React.FC<AgentManagementProps> = ({ agents }) => {
             const response = await fetch(`/api/agents/${agentId}/deactivate`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 

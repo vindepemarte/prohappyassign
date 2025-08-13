@@ -52,7 +52,7 @@ const HierarchyOverview: React.FC = () => {
             // Fetch hierarchy users
             const usersResponse = await fetch('/api/hierarchy/super-agent-network', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -64,7 +64,7 @@ const HierarchyOverview: React.FC = () => {
             // Fetch hierarchy statistics
             const statsResponse = await fetch('/api/permissions/hierarchy-overview', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -85,7 +85,7 @@ const HierarchyOverview: React.FC = () => {
             // Check hierarchy integrity
             const integrityResponse = await fetch('/api/hierarchy/validate-integrity', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
@@ -136,7 +136,7 @@ const HierarchyOverview: React.FC = () => {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 },
                 body: JSON.stringify({ userId, newParentId })
             });
@@ -158,7 +158,7 @@ const HierarchyOverview: React.FC = () => {
         try {
             const response = await fetch('/api/hierarchy/validate-integrity', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 

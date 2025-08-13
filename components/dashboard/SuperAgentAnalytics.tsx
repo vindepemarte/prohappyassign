@@ -65,7 +65,7 @@ const SuperAgentAnalytics: React.FC<SuperAgentAnalyticsProps> = ({ projects, tim
             // Fetch user details
             const response = await fetch('/api/hierarchy/super-agent-network', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
                 }
             });
 
