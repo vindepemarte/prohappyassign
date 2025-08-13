@@ -25,10 +25,32 @@ const PricingBreakdown: React.FC<PricingBreakdownProps> = ({
         
         {showDetails && (
           <div className="space-y-2 text-sm text-gray-600 mb-3">
-            <div className="flex justify-between items-center">
-              <span>Base Price:</span>
-              <span className="font-medium">£{breakdown.basePrice.toFixed(2)}</span>
-            </div>
+            {/* Agent-specific pricing breakdown */}
+            {breakdown.agentInfo && (
+              <>
+                <div className="text-xs text-blue-700 font-medium mb-2">
+                  Pricing by {breakdown.agentInfo.name}
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Base Cost ({breakdown.wordCount} words):</span>
+                  <span className="font-medium">£{breakdown.basePrice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Agent Fee ({breakdown.agentInfo.feePercentage}%):</span>
+                  <span className="font-medium">£{breakdown.agentInfo.agentFee.toFixed(2)}</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  Rate: £{breakdown.agentInfo.baseRate} per 500 words
+                </div>
+              </>
+            )}
+            
+            {!breakdown.agentInfo && (
+              <div className="flex justify-between items-center">
+                <span>Base Price:</span>
+                <span className="font-medium">£{breakdown.basePrice.toFixed(2)}</span>
+              </div>
+            )}
             
             {breakdown.deadlineCharge > 0 && (
               <div className="flex justify-between items-center">

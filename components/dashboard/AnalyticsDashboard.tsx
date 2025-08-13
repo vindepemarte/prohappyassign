@@ -23,6 +23,29 @@ interface MonthlyData {
 
 const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ projects, timeFilter }) => {
   const [clientNames, setClientNames] = useState<Record<string, string>>({});
+  const [agentStats, setAgentStats] = useState<any>(null);
+
+  // Fetch agent statistics
+  useEffect(() => {
+    const fetchAgentStats = async () => {
+      try {
+        const response = await fetch('/api/agent-pricing/stats/current', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setAgentStats(data.data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch agent stats:', error);
+      }
+    };
+
+    fetchAgentStats();
+  }, [projects]);
 
   // Fetch client names
   useEffect(() => {
@@ -194,12 +217,39 @@ const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ projects, timeF
           color="purple"
         />
         <MetricCard
-          title="Total Profit"
+          title="Agent Profit"
           value={`£${analyticsData.currentPeriod.totalProfit.toFixed(2)}`}
           subtitle={`Margin: ${analyticsData.currentPeriod.profitMargin.toFixed(1)}%`}
           color="green"
         />
       </div>
+
+      {/* Agent-Specific Metrics */}
+      {agentStats && (
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Agent Financial Summary</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                £{agentStats.total_fees_owed_to_super_agent.toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-500">Fees Owed to Super Agent</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                £{agentStats.total_agent_profit.toFixed(2)}
+              </div>
+              <div className="text-sm text-gray-500">Your Total Profit</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {agentStats.projects_this_month}
+              </div>
+              <div className="text-sm text-gray-500">Projects This Month</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

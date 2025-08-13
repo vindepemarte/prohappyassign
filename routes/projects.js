@@ -244,13 +244,24 @@ router.patch('/:id/status', authenticateToken, async (req, res) => {
 // Assign worker to project
 router.patch('/:id/assign-worker', authenticateToken, async (req, res) => {
   try {
-    const { workerId } = req.body;
+    const { workerId, assignedBy } = req.body;
     const projectId = req.params.id;
 
-    const result = await pool.query(
-      'UPDATE projects SET worker_id = $1, status = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
-      [workerId, 'in_progress', projectId]
-    );
+    // Determine which field to update based on who is assigning
+    let updateQuery;
+    let updateParams;
+
+    if (assignedBy === 'super_worker') {
+      // Super Worker assigns to sub_worker_id
+      updateQuery = 'UPDATE projects SET sub_worker_id = $1, status = $2, updated_at = NOW() WHERE id = $3 RETURNING *';
+      updateParams = [workerId, 'in_progress', projectId];
+    } else {
+      // Agent assigns to worker_id (default behavior)
+      updateQuery = 'UPDATE projects SET worker_id = $1, status = $2, updated_at = NOW() WHERE id = $3 RETURNING *';
+      updateParams = [workerId, 'in_progress', projectId];
+    }
+
+    const result = await pool.query(updateQuery, updateParams);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Project not found' });

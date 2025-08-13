@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from './DashboardLayout';
+import AgentPricingConfig from './AgentPricingConfig';
 import { getAllProjectsForAgent, updateProjectStatus, getAllWorkers, assignWorkerToProject, processRefund } from '../../services/assignmentService';
 import { Project, ProjectStatus, Profile } from '../../types';
 import { WORKER_PAY_RATE_PER_500_WORDS } from '../../constants';
@@ -82,7 +83,16 @@ const AgentDashboard: React.FC = () => {
     const [clientNames, setClientNames] = useState<Record<string, string>>({});
 
     // Analytics dashboard state
-    const [viewMode, setViewMode] = useState<'docs' | 'charts'>('docs');
+    const [viewMode, setViewMode] = useState<'docs' | 'charts' | 'settings'>('docs');
+
+    // Agent pricing configuration state
+    const [agentPricing, setAgentPricing] = useState({
+        min_word_count: 500,
+        max_word_count: 20000,
+        base_rate_per_500_words: 6.25,
+        agent_fee_percentage: 15.0
+    });
+    const [pricingLoading, setPricingLoading] = useState(false);
 
     useEffect(() => {
         fetchAgentData();
@@ -122,15 +132,41 @@ const AgentDashboard: React.FC = () => {
     }, [searchTerm, selectedClientId, selectedModuleName]);
 
     const updateFilteredData = (allProjects: Project[], filter: TimeFilter) => {
-        // Calculate profit breakdown for the filtered period
-        const profitBreakdown = ProfitCalculator.calculateProfitBreakdown(allProjects, filter);
+        // Calculate agent-specific profit breakdown for the filtered period
+        let totalRevenue = 0;
+        let totalWorkerPayments = 0;
+        let totalFeesOwed = 0;
+        let totalAgentProfit = 0;
 
-        // Set profit data for display
+        const filteredByTime = allProjects.filter(project => {
+            if (filter.startDate && filter.endDate) {
+                const projectDate = new Date(project.created_at);
+                return projectDate >= filter.startDate && projectDate <= filter.endDate;
+            }
+            return true;
+        });
+
+        filteredByTime.forEach(project => {
+            if (project.status === 'completed') {
+                const wordCount = project.adjusted_word_count || project.initial_word_count;
+                const workerPayout = (wordCount / 500) * 6.25; // Standard worker rate
+                const baseCost = (wordCount / 500) * agentPricing.base_rate_per_500_words;
+                const agentFee = baseCost * (agentPricing.agent_fee_percentage / 100);
+                const agentProfit = project.cost_gbp - baseCost - agentFee;
+
+                totalRevenue += project.cost_gbp;
+                totalWorkerPayments += workerPayout;
+                totalFeesOwed += agentFee;
+                totalAgentProfit += agentProfit;
+            }
+        });
+
+        // Set profit data for display (showing agent-specific breakdown)
         const earnings: EarningsDisplay = {
-            gbp: profitBreakdown.totalRevenue,
+            gbp: totalRevenue,
             inr: 0, // Not needed for agent dashboard
-            profit: profitBreakdown.totalProfit,
-            toPay: profitBreakdown.totalWorkerPayments
+            profit: totalAgentProfit, // Agent's profit after fees to Super Agent
+            toPay: totalFeesOwed // Amount owed to Super Agent
         };
 
         setProfitData(earnings);
@@ -180,12 +216,22 @@ const AgentDashboard: React.FC = () => {
         try {
             loadingActions.startLoading();
 
-            const [projectsData, workersData] = await Promise.all([
-                getAllProjectsForAgent(),
-                getAllWorkers()
-            ]);
+            // Fetch only projects from assigned clients (limited scope)
+            const response = await fetch('/api/permissions/accessible-projects', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
 
-            setProjects(projectsData);
+            if (!response.ok) {
+                throw new Error('Failed to fetch agent projects');
+            }
+
+            const projectsData = await response.json();
+            setProjects(projectsData.data);
+
+            // Fetch workers for assignment (agents can still assign workers)
+            const workersData = await getAllWorkers();
             setWorkers(workersData);
 
             // Fetch client names
@@ -206,10 +252,62 @@ const AgentDashboard: React.FC = () => {
                 }
             }
 
+            // Fetch agent pricing configuration
+            await fetchAgentPricing();
+
             loadingActions.stopLoading();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
             loadingActions.setError(errorMessage);
+        }
+    };
+
+    const fetchAgentPricing = async () => {
+        try {
+            const response = await fetch('/api/agent-pricing/current', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.data) {
+                    setAgentPricing({
+                        min_word_count: data.data.min_word_count,
+                        max_word_count: data.data.max_word_count,
+                        base_rate_per_500_words: data.data.base_rate_per_500_words,
+                        agent_fee_percentage: data.data.agent_fee_percentage
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch agent pricing:', error);
+        }
+    };
+
+    const saveAgentPricing = async () => {
+        setPricingLoading(true);
+        try {
+            const response = await fetch('/api/agent-pricing/current', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(agentPricing)
+            });
+
+            if (response.ok) {
+                alert('Pricing configuration saved successfully!');
+            } else {
+                throw new Error('Failed to save pricing configuration');
+            }
+        } catch (error) {
+            console.error('Error saving pricing:', error);
+            alert('Failed to save pricing configuration. Please try again.');
+        } finally {
+            setPricingLoading(false);
         }
     };
 
@@ -338,7 +436,7 @@ const AgentDashboard: React.FC = () => {
 
     return (
         <DashboardLayout title="Agent Control Panel">
-            {/* Filter Bar with Profit Tracking */}
+            {/* Filter Bar with Agent-Specific Profit Tracking */}
             <div className="mb-6">
                 <FilterBar
                     onFilterChange={handleFilterChange}
@@ -346,9 +444,35 @@ const AgentDashboard: React.FC = () => {
                     currentFilter={currentFilter}
                     earnings={profitData || undefined}
                     showEarnings={true}
-                    showProfit={true}
+                    showProfit={false}
                     className="mb-4"
                 />
+                
+                {/* Agent-Specific Financial Summary */}
+                {profitData && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div className="text-lg font-semibold text-blue-900">
+                                    £{profitData.gbp.toFixed(2)}
+                                </div>
+                                <div className="text-sm text-blue-700">Total Revenue</div>
+                            </div>
+                            <div>
+                                <div className="text-lg font-semibold text-orange-600">
+                                    £{profitData.toPay?.toFixed(2) || '0.00'}
+                                </div>
+                                <div className="text-sm text-orange-700">Owed to Super Agent</div>
+                            </div>
+                            <div>
+                                <div className="text-lg font-semibold text-green-600">
+                                    £{profitData.profit?.toFixed(2) || '0.00'}
+                                </div>
+                                <div className="text-sm text-green-700">Your Profit</div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Advanced Filtering Controls - Only show in docs mode */}
@@ -433,7 +557,8 @@ const AgentDashboard: React.FC = () => {
             {/* View Toggle */}
             <div className="flex items-center justify-between mb-6 border-t pt-6">
                 <h2 className="text-2xl font-bold text-gray-800">
-                    {viewMode === 'docs' ? `Filtered Projects (${filteredProjects.length})` : 'Analytics Dashboard'}
+                    {viewMode === 'docs' ? `Filtered Projects (${filteredProjects.length})` : 
+                     viewMode === 'charts' ? 'Analytics Dashboard' : 'Pricing Settings'}
                 </h2>
                 <div className="flex items-center space-x-2">
                     <button
@@ -460,6 +585,19 @@ const AgentDashboard: React.FC = () => {
                         </svg>
                         <span>Analytics</span>
                     </button>
+                    <button
+                        onClick={() => setViewMode('settings')}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${viewMode === 'settings'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Settings</span>
+                    </button>
                 </div>
             </div>
             <LoadingWrapper
@@ -470,6 +608,8 @@ const AgentDashboard: React.FC = () => {
                 {/* Conditional Content Based on View Mode */}
                 {viewMode === 'charts' ? (
                     <AnalyticsDashboard projects={projects} timeFilter={currentFilter} />
+                ) : viewMode === 'settings' ? (
+                    <AgentPricingConfig />
                 ) : (
                     <>
                         {!loadingState.isLoading && filteredProjects.length === 0 ? (
@@ -481,7 +621,12 @@ const AgentDashboard: React.FC = () => {
                                 {filteredProjects.map(project => {
                                     const currentWordCount = project.adjusted_word_count || project.initial_word_count;
                                     const workerPayout = calculateWorkerPayoutGbp(currentWordCount);
-                                    const profit = project.cost_gbp - workerPayout;
+                                    
+                                    // Calculate agent fee based on agent's pricing configuration
+                                    const baseCost = (currentWordCount / 500) * agentPricing.base_rate_per_500_words;
+                                    const agentFee = baseCost * (agentPricing.agent_fee_percentage / 100);
+                                    const superAgentOwed = agentFee;
+                                    const agentProfit = project.cost_gbp - baseCost - superAgentOwed;
 
                                     return (
                                         <ProjectCard key={project.id} project={project}>
@@ -506,7 +651,8 @@ const AgentDashboard: React.FC = () => {
                                                 <div className="mt-2 pt-2 border-t">
                                                     <p><strong>Client Price:</strong> £{project.cost_gbp.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
                                                     <p><strong>Worker Payout:</strong> £{workerPayout.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
-                                                    <p className="font-bold text-[#F5A623]"><strong>Profit:</strong> £{profit.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
+                                                    <p><strong>Owed to Super Agent:</strong> £{superAgentOwed.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
+                                                    <p className="font-bold text-[#F5A623]"><strong>Agent Profit:</strong> £{agentProfit.toLocaleString('en-GB', { minimumFractionDigits: 2 })}</p>
                                                 </div>
                                             </div>
 
@@ -534,15 +680,13 @@ const AgentDashboard: React.FC = () => {
                                                     )}
                                                 </div>
                                                 <div>
-                                                    <ModernStatusSelector
-                                                        currentStatus={project.status}
-                                                        onStatusChange={(status) => handleStatusChange(project.id, status)}
-                                                        options={ALL_STATUSES.map(status => ({
-                                                            value: status,
-                                                            label: status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                                                            description: getStatusDescription(status)
-                                                        }))}
-                                                    />
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Project Status:</label>
+                                                    <div className="bg-gray-100 p-2 rounded-lg">
+                                                        <StatusBadge status={project.status} />
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            {getStatusDescription(project.status)}
+                                                        </p>
+                                                    </div>
                                                 </div>
 
                                                 {/* Refund Processing UI */}

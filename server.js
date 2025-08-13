@@ -108,6 +108,14 @@ try {
   const { default: notificationRoutes } = await import('./routes/notifications.js');
   const { default: fileRoutes } = await import('./routes/files.js');
   const { default: userRoutes } = await import('./routes/users.js');
+  const { default: referenceCodeRoutes } = await import('./routes/referenceCodes.js');
+  const { default: hierarchyRoutes } = await import('./routes/hierarchy.js');
+  const { default: permissionRoutes } = await import('./routes/permissions.js');
+  const { default: agentPricingRoutes } = await import('./routes/agentPricing.js');
+  const { default: financialSecurityRoutes } = await import('./routes/financialSecurity.js');
+  const { default: projectAssignmentRoutes } = await import('./routes/projectAssignment.js');
+  const { default: hierarchyOperationsRoutes } = await import('./routes/hierarchyOperations.js');
+  const { default: apiDocumentationRoutes } = await import('./routes/apiDocumentation.js');
   console.log('✅ All routes loaded successfully');
   
   // API routes with debugging
@@ -121,6 +129,14 @@ try {
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/files', fileRoutes);
   app.use('/api/users', userRoutes);
+  app.use('/api/reference-codes', referenceCodeRoutes);
+  app.use('/api/hierarchy', hierarchyRoutes);
+  app.use('/api/permissions', permissionRoutes);
+  app.use('/api/agent-pricing', agentPricingRoutes);
+  app.use('/api/financial-security', financialSecurityRoutes);
+  app.use('/api/project-assignment', projectAssignmentRoutes);
+  app.use('/api/hierarchy-operations', hierarchyOperationsRoutes);
+  app.use('/api/docs', apiDocumentationRoutes);
   console.log('✅ All routes mounted successfully');
   
   // Test that auth routes are working

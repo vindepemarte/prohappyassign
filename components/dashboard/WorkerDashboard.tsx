@@ -1,18 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from './DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
-import { getProjectsForWorker } from '../../services/assignmentService';
 import { Project, ProjectStatus } from '../../types';
-import { GBP_TO_INR_RATE, WORKER_PAY_RATE_PER_500_WORDS } from '../../constants';
 import Button from '../Button';
 import ProjectDetailModal from '../modals/ProjectDetailModal';
-import FilterBar, { TimeFilter, EarningsDisplay } from '../common/FilterBar';
 import LoadingWrapper from '../common/LoadingWrapper';
 import ProjectCard from '../common/ProjectCard';
 import StatusBadge from '../common/StatusBadge';
-import useFilterState from '../../hooks/useFilterState';
-import { EarningsCalculator, WorkerEarnings } from '../../utils/earningsCalculator';
+import ModernSearchField from '../common/ModernSearchField';
 import { useRobustLoading } from '../../hooks/useRobustLoading';
+import NotificationCenter from './NotificationCenter';
 
 
 // StatusBadge component moved to components/common/StatusBadge.tsx
@@ -20,9 +17,11 @@ import { useRobustLoading } from '../../hooks/useRobustLoading';
 const WorkerDashboard: React.FC = () => {
     const { user } = useAuth();
     const [projects, setProjects] = useState<Project[]>([]);
+    const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
-    const [earningsLoading, setEarningsLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [selectedStatus, setSelectedStatus] = useState<ProjectStatus | ''>('');
     const [loadingState, loadingActions] = useRobustLoading({
         timeout: 15000, // 15 seconds for project loading
         maxRetries: 2,
@@ -30,16 +29,17 @@ const WorkerDashboard: React.FC = () => {
         minLoadingTime: 500
     });
 
-    // Filter state management
-    const { currentFilter, setFilter } = useFilterState({
-        defaultFilter: { type: 'month' },
-        persistToUrl: true,
-        urlParamPrefix: 'worker_filter'
-    });
+    // Assignment notifications state
+    const [notifications, setNotifications] = useState<any[]>([]);
 
     useEffect(() => {
         fetchWorkerProjects();
+        fetchAssignmentNotifications();
     }, [user]);
+
+    useEffect(() => {
+        updateFilteredProjects();
+    }, [projects, searchTerm, selectedStatus]);
 
     const fetchWorkerProjects = async () => {
         if (!user) return;
@@ -47,14 +47,63 @@ const WorkerDashboard: React.FC = () => {
         try {
             loadingActions.startLoading();
 
-            const data = await getProjectsForWorker(user.id);
+            // Fetch only projects assigned to this worker (worker_id or sub_worker_id)
+            const response = await fetch('/api/permissions/accessible-projects', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
 
-            setProjects(data);
+            if (!response.ok) {
+                throw new Error('Failed to fetch assigned projects');
+            }
+
+            const data = await response.json();
+            setProjects(data.data);
             loadingActions.stopLoading();
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
             loadingActions.setError(errorMessage);
         }
+    };
+
+    const fetchAssignmentNotifications = async () => {
+        if (!user) return;
+
+        try {
+            const response = await fetch(`/api/notifications/history/${user.id}?type=assignment`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setNotifications(data.data || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch assignment notifications:', error);
+        }
+    };
+
+    const updateFilteredProjects = () => {
+        let filtered = projects;
+
+        // Apply search filter
+        if (searchTerm.trim()) {
+            const searchLower = searchTerm.toLowerCase();
+            filtered = filtered.filter(project => 
+                project.order_reference?.toLowerCase().includes(searchLower) ||
+                project.title?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Apply status filter
+        if (selectedStatus) {
+            filtered = filtered.filter(project => project.status === selectedStatus);
+        }
+
+        setFilteredProjects(filtered);
     };
 
     const handleOpenModal = (projectId: number) => {
@@ -69,105 +118,91 @@ const WorkerDashboard: React.FC = () => {
         fetchWorkerProjects();
     };
 
-    const calculateWorkerPayout = (wordCount: number): number => {
-        const payoutGbp = (wordCount / 500) * WORKER_PAY_RATE_PER_500_WORDS;
-        return payoutGbp * GBP_TO_INR_RATE;
+    const clearAllFilters = () => {
+        setSearchTerm('');
+        setSelectedStatus('');
     };
 
-    // Filter projects based on current time filter
-    const filteredProjects = useMemo(() => {
-        if (!currentFilter.startDate || !currentFilter.endDate) {
-            return projects;
+    const getAssignmentSource = (project: Project) => {
+        if (project.sub_worker_id === user?.id) {
+            return 'Assigned by Super Worker';
+        } else if (project.worker_id === user?.id) {
+            return 'Assigned by Agent';
         }
-        return EarningsCalculator.filterProjectsByTimeRange(projects, currentFilter);
-    }, [projects, currentFilter]);
-
-    // Calculate earnings for filtered projects
-    const earnings = useMemo((): WorkerEarnings => {
-        if (projects.length === 0) {
-            return {
-                totalGbp: 0,
-                totalInr: 0,
-                projectCount: 0,
-                averagePerProject: 0,
-                projects: []
-            };
-        }
-        return EarningsCalculator.calculateWorkerEarnings(projects, currentFilter);
-    }, [projects, currentFilter]);
-
-    // Format earnings for display
-    const earningsDisplay = useMemo((): EarningsDisplay => ({
-        gbp: earnings.totalGbp,
-        inr: earnings.totalInr
-    }), [earnings]);
-
-    // Handle filter changes
-    const handleFilterChange = async (filter: TimeFilter) => {
-        setEarningsLoading(true);
-        try {
-            setFilter(filter);
-            // Small delay to show loading state
-            await new Promise(resolve => setTimeout(resolve, 300));
-        } finally {
-            setEarningsLoading(false);
-        }
-    };
-
-    // Handle date range changes
-    const handleDateRangeChange = (startDate: Date, endDate: Date) => {
-        // This is handled by the FilterBar component internally
-        // The filter change will trigger through handleFilterChange
+        return 'Direct Assignment';
     };
 
     return (
         <>
             <DashboardLayout title="My Assigned Projects">
-                {/* Filter Bar with Earnings Display */}
-                <div className="mb-6">
-                    <FilterBar
-                        onFilterChange={handleFilterChange}
-                        onDateRangeChange={handleDateRangeChange}
-                        currentFilter={currentFilter}
-                        earnings={earningsDisplay}
-                        showEarnings={true}
-                        className="mb-4"
-                    />
-
-                    {/* Earnings Summary Card */}
-                    {!loadingState.isLoading && !loadingState.error && projects.length > 0 && (
-                        <div className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
-                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                <div>
-                                    <h3 className="text-lg font-semibold text-gray-800">
-                                        {earningsLoading ? 'Calculating...' : 'Your Earnings'}
-                                    </h3>
-                                    <p className="text-sm text-gray-600">
-                                        Based on {earnings.projectCount} completed project{earnings.projectCount !== 1 ? 's' : ''}
-                                        {currentFilter.type === 'week' && ' this week'}
-                                        {currentFilter.type === 'month' && ' this month'}
-                                        {currentFilter.type === 'custom' && ' in selected period'}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-2xl font-bold text-green-700">
-                                        {earningsLoading ? (
-                                            <div className="animate-pulse bg-gray-200 h-8 w-32 rounded"></div>
-                                        ) : (
-                                            `₹${earnings.totalInr.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`
-                                        )}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                        {earningsLoading ? (
-                                            <div className="animate-pulse bg-gray-200 h-4 w-20 rounded mt-1"></div>
-                                        ) : (
-                                            `£${earnings.totalGbp.toFixed(2)}`
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                {/* Assignment Overview */}
+                <div className="mb-6 bg-white rounded-lg shadow-sm border p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Assignment Overview</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">{projects.length}</div>
+                            <div className="text-sm text-gray-500">Total Assigned</div>
                         </div>
-                    )}
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-green-600">
+                                {projects.filter(p => p.status === 'completed').length}
+                            </div>
+                            <div className="text-sm text-gray-500">Completed</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-2xl font-bold text-orange-600">
+                                {projects.filter(p => p.status === 'in_progress').length}
+                            </div>
+                            <div className="text-sm text-gray-500">In Progress</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Notification Center */}
+                <div className="mb-6">
+                    <NotificationCenter userId={user?.id || ''} userRole="worker" />
+                </div>
+
+                {/* Search and Filter Controls */}
+                <div className="mb-6 bg-white rounded-lg shadow-sm border p-4">
+                    <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
+                        <div className="flex-1 min-w-0">
+                            <label className="block text-sm font-semibold text-gray-900 mb-3">
+                                Search Projects
+                            </label>
+                            <ModernSearchField
+                                placeholder="Search by order reference or title"
+                                value={searchTerm}
+                                onChange={setSearchTerm}
+                            />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Filter by Status
+                            </label>
+                            <select
+                                value={selectedStatus}
+                                onChange={(e) => setSelectedStatus(e.target.value as ProjectStatus | '')}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            >
+                                <option value="">All Statuses</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="needs_changes">Needs Changes</option>
+                                <option value="pending_final_approval">Pending Final Approval</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+
+                        <div className="flex-shrink-0">
+                            <button
+                                onClick={clearAllFilters}
+                                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                            >
+                                Clear Filters
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <LoadingWrapper
@@ -182,6 +217,7 @@ const WorkerDashboard: React.FC = () => {
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 max-w-md mx-auto">
                                 <p className="text-lg font-medium text-gray-600 mb-2">No Projects Assigned</p>
                                 <p className="text-sm">You have no projects assigned to you at the moment.</p>
+                                <p className="text-sm mt-2 text-blue-600">Check back later or contact your supervisor.</p>
                             </div>
                         </div>
                     }
@@ -193,47 +229,58 @@ const WorkerDashboard: React.FC = () => {
                         {filteredProjects.length !== projects.length && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                                 <p className="text-sm text-blue-700">
-                                    Showing {filteredProjects.length} of {projects.length} projects for the selected time period
+                                    Showing {filteredProjects.length} of {projects.length} assigned projects
                                 </p>
                             </div>
                         )}
 
                         {filteredProjects.map(project => {
                             const currentWordCount = project.adjusted_word_count || project.initial_word_count;
-                            const isCompleted = project.status === 'completed';
+                            const assignmentSource = getAssignmentSource(project);
+                            
                             return (
                                 <ProjectCard key={project.id} project={project}>
                                     <div className="p-4 space-y-3">
                                         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
                                             <p className="text-sm text-gray-500">
+                                                {assignmentSource}
+                                            </p>
+                                            <p className="text-sm text-gray-500">
                                                 Assigned on: {new Date(project.updated_at).toLocaleDateString()}
                                             </p>
                                         </div>
-                                        <div className="mt-4 border-t pt-3 text-sm text-gray-600 grid grid-cols-2 gap-2">
-                                            <p><strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}</p>
-                                            <p><strong>Word Count:</strong> {currentWordCount.toLocaleString()}</p>
-                                        </div>
-                                        <div className={`mt-3 border rounded-lg p-3 text-center ${isCompleted
-                                            ? 'bg-green-50 border-green-200'
-                                            : 'bg-gray-50 border-gray-200'
-                                            }`}>
-                                            <p className={`font-semibold ${isCompleted ? 'text-green-800' : 'text-gray-600'
-                                                }`}>
-                                                {isCompleted ? 'Earned: ' : 'Potential Payout: '}
-                                                ₹{calculateWorkerPayout(currentWordCount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                                            </p>
-                                            {!isCompleted && (
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    Payment upon completion
+                                        
+                                        <div className="mt-4 border-t pt-3 text-sm text-gray-600 space-y-2">
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <p><strong>Deadline:</strong> {new Date(project.deadline).toLocaleDateString()}</p>
+                                                <p><strong>Word Count:</strong> {currentWordCount.toLocaleString()}</p>
+                                            </div>
+                                            {project.adjusted_word_count && (
+                                                <p className="text-purple-600 text-xs">
+                                                    Word count has been adjusted from {project.initial_word_count.toLocaleString()}
                                                 </p>
                                             )}
                                         </div>
+
+                                        <div className="mt-3 border rounded-lg p-3">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <StatusBadge status={project.status} />
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-sm text-gray-600">
+                                                        Order: {project.order_reference}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <div className="mt-4 flex justify-end">
                                             <Button
                                                 className="!w-auto py-2 px-4 text-sm"
                                                 onClick={() => handleOpenModal(project.id)}
                                             >
-                                                View Details &amp; Actions
+                                                View Details & Work
                                             </Button>
                                         </div>
                                     </div>
@@ -245,9 +292,9 @@ const WorkerDashboard: React.FC = () => {
                         {projects.length > 0 && filteredProjects.length === 0 && (
                             <div className="text-center py-10">
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-                                    <p className="text-yellow-800 font-medium mb-2">No Projects in Selected Period</p>
+                                    <p className="text-yellow-800 font-medium mb-2">No Projects Match Filters</p>
                                     <p className="text-yellow-700 text-sm">
-                                        Try selecting a different time range to see your projects.
+                                        Try adjusting your search or status filter to see more projects.
                                     </p>
                                 </div>
                             </div>

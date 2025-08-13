@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server.js",
-    "deploy": "npm run build"
+    "deploy": "npm run build",
+    "migrate": "node scripts/run-migrations.js",
+    "migrate:rollback": "psql $DATABASE_URL -f scripts/migrations/rollback_user_hierarchy.sql",
+    "db:test": "node scripts/test-db-connection.js"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -23,6 +26,7 @@
     "express": "^4.21.2",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.539.0",
     "multer": "^2.0.2",
     "pg": "^8.16.3",
     "react": "^19.1.1",
