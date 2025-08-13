@@ -22,8 +22,8 @@ const Register: React.FC = () => {
         setMessage('');
 
         // Validate reference code format
-        if (referenceCode && !/^[A-Z]{2}-[A-Z]{3}-[A-Z0-9]{6}$/.test(referenceCode)) {
-            setError('Reference code must be in format: XX-XXX-XXXXXX (e.g., SA-CLI-ABC123)');
+        if (referenceCode && !/^[A-Z0-9]{5}$/.test(referenceCode)) {
+            setError('Reference code must be 5 characters (letters and numbers only, e.g., ABC12)');
             setLoading(false);
             return;
         }
@@ -84,13 +84,13 @@ const Register: React.FC = () => {
                 id="referenceCode"
                 name="referenceCode"
                 type="text"
-                placeholder="Reference Code (e.g., SA-CLI-ABC123)"
+                placeholder="Reference Code (e.g., ABC12)"
                 value={referenceCode}
                 onChange={(e) => setReferenceCode(e.target.value.toUpperCase())}
                 required
-                maxLength={14}
-                pattern="[A-Z]{2}-[A-Z]{3}-[A-Z0-9]{6}"
-                title="Reference code format: XX-XXX-XXXXXX"
+                maxLength={5}
+                pattern="[A-Z0-9]{5}"
+                title="Reference code format: 5 characters (letters and numbers)"
                 style={{ fontFamily: 'monospace' }}
                 icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2a2 2 0 00-2 2m2-2V5a2 2 0 00-2-2H9a2 2 0 00-2 2v2M7 7a2 2 0 012-2m0 0a2 2 0 012 2m-2-2v2m0 0V9a2 2 0 002 2m-2-2a2 2 0 00-2-2" /></svg>}
             />

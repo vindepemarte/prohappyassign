@@ -356,10 +356,10 @@ export const ReferenceCodeValidation: React.FC<ReferenceCodeValidationProps> = (
       return;
     }
 
-    if (!/^[A-Z]{2}-[A-Z]{3}-[A-Z0-9]{6}$/.test(code.toUpperCase())) {
+    if (!/^[A-Z0-9]{5}$/.test(code.toUpperCase())) {
       setValidationResult({
         isValid: false,
-        message: 'Reference code must be in format: XX-XXX-XXXXXX (e.g., SA-CLI-ABC123)'
+        message: 'Reference code must be 5 characters (letters and numbers only, e.g., ABC12)'
       });
       return;
     }
@@ -406,12 +406,12 @@ export const ReferenceCodeValidation: React.FC<ReferenceCodeValidationProps> = (
                 setCode(e.target.value.toUpperCase());
                 setValidationResult(null);
               }}
-              placeholder="SA-CLI-ABC123"
+              placeholder="ABC12"
               className="font-mono"
-              maxLength={14}
+              maxLength={5}
             />
             <p className="text-xs text-gray-500">
-              Format: XX-XXX-XXXXXX (letters and numbers)
+              Format: 5 characters (letters and numbers)
             </p>
           </div>
 
