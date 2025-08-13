@@ -21,10 +21,10 @@ if (fs.existsSync('.env.local')) {
   dotenv.config({ path: '.env' });
 }
 
-// Database connection
+// Database connection - NO SSL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: false,
 });
 
 // Migration tracking table

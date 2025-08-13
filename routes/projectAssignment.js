@@ -7,7 +7,8 @@ import ProjectAssignmentService from '../services/projectAssignmentService.js';
 const router = express.Router();
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: false
 });
 
 // Assign user to project

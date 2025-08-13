@@ -10,7 +10,8 @@ import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: false
 });
 
 async function setupProductionData() {

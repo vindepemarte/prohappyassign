@@ -6,7 +6,8 @@ import { requirePermission } from '../middleware/permissions.js';
 const router = express.Router();
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: false
 });
 
 // Get current agent's pricing configuration

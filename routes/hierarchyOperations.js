@@ -15,7 +15,8 @@ import {
 const router = express.Router();
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: false
 });
 
 // Helper function to validate hierarchy moves

@@ -16,7 +16,8 @@ dotenv.config({ path: '.env.local' });
 dotenv.config();
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: false
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;

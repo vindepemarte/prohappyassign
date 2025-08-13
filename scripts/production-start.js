@@ -9,7 +9,8 @@ import { Pool } from 'pg';
 import { spawn } from 'child_process';
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: false
 });
 
 async function productionStart() {
