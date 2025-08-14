@@ -1,7 +1,7 @@
 import express from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
-import { PricingCalculator } from '../services/pricingCalculator.js';
+import { PricingService } from '../services/pricingService.js';
 
 const router = express.Router();
 
@@ -181,23 +181,30 @@ router.post('/create', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Title, description, word count, and deadline are required' });
     }
 
-    // Calculate pricing using the pricing calculator
+    // Calculate pricing using the pricing service
     const deadlineDate = new Date(deadline);
-    const pricing = PricingCalculator.calculateTotalPrice(word_count, deadlineDate);
+    const basePrice = PricingService.calculateSuperAgentPrice(word_count);
+    const urgencyCharge = PricingService.calculateUrgencyCharge(deadlineDate);
+    const urgencyLevel = PricingService.getUrgencyLevel(deadlineDate);
+    const pricing = {
+      basePrice,
+      deadlineCharge: urgencyCharge,
+      totalPrice: basePrice + urgencyCharge,
+      urgencyLevel
+    };
 
     // Create project with calculated pricing
     const result = await pool.query(
       `INSERT INTO projects (
         client_id, title, description, initial_word_count, word_count, deadline, 
-        base_price, deadline_charge, total_price, urgency_level, status,
+        cost_gbp, deadline_charge, urgency_level, status,
         subject, academic_level, paper_type,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
       RETURNING *`,
       [
         req.userId, title, description, word_count, word_count, deadline,
-        pricing.basePrice, pricing.deadlineCharge, pricing.totalPrice, 
-        pricing.urgencyLevel, 'pending_payment_approval',
+        pricing.totalPrice, pricing.deadlineCharge, pricing.urgencyLevel, 'pending_payment_approval',
         subject, academic_level, paper_type
       ]
     );

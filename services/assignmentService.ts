@@ -2,7 +2,7 @@
 
 import { projectsApi, filesApi } from './apiService';
 import { sendNotification } from './notificationService';
-import { PricingCalculator } from './pricingCalculator';
+import { PricingService } from './pricingService.js';
 import type { NewProjectFormData, Project, ChangesFormData, ProjectStatus, ProjectWithDetails, PricingBreakdown, UrgencyLevel } from '../types';
 
 
@@ -14,7 +14,7 @@ import type { NewProjectFormData, Project, ChangesFormData, ProjectStatus, Proje
  * @returns The calculated price in GBP.
  */
 export const calculatePrice = (wordCount: number): number => {
-    return PricingCalculator.calculateBasePrice(wordCount);
+    return PricingService.calculateSuperAgentPrice(wordCount);
 };
 
 /**
@@ -29,7 +29,17 @@ export const calculateEnhancedPrice = (
     deadline: Date,
     requestDate: Date = new Date()
 ): PricingBreakdown => {
-    return PricingCalculator.calculateTotalPrice(wordCount, deadline, requestDate);
+    const basePrice = PricingService.calculateSuperAgentPrice(wordCount);
+    const deadlineCharge = PricingService.calculateUrgencyCharge(deadline, requestDate);
+    const urgencyLevel = PricingService.getUrgencyLevel(deadline, requestDate);
+    const totalPrice = basePrice + deadlineCharge;
+    
+    return {
+        basePrice,
+        deadlineCharge,
+        totalPrice,
+        urgencyLevel: urgencyLevel as UrgencyLevel
+    };
 };
 
 /**

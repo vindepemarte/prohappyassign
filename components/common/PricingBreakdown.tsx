@@ -1,6 +1,5 @@
 import React from 'react';
 import { PricingBreakdown as PricingBreakdownType, UrgencyLevel } from '../../types';
-import { PricingCalculator } from '../../services/pricingCalculator';
 
 interface PricingBreakdownProps {
   breakdown: PricingBreakdownType;
@@ -13,8 +12,26 @@ const PricingBreakdown: React.FC<PricingBreakdownProps> = ({
   showDetails = true, 
   className = '' 
 }) => {
-  const urgencyColor = PricingCalculator.getUrgencyColor(breakdown.urgencyLevel);
-  const urgencyText = PricingCalculator.getUrgencyDisplayText(breakdown.urgencyLevel);
+  const getUrgencyColor = (level: UrgencyLevel) => {
+    switch (level) {
+      case 'rush': return '#dc2626';
+      case 'urgent': return '#ea580c';
+      case 'moderate': return '#d97706';
+      default: return '#059669';
+    }
+  };
+  
+  const getUrgencyDisplayText = (level: UrgencyLevel) => {
+    switch (level) {
+      case 'rush': return 'Rush Delivery';
+      case 'urgent': return 'Urgent Delivery';
+      case 'moderate': return 'Moderate Priority';
+      default: return 'Standard Delivery';
+    }
+  };
+
+  const urgencyColor = getUrgencyColor(breakdown.urgencyLevel);
+  const urgencyText = getUrgencyDisplayText(breakdown.urgencyLevel);
 
   return (
     <div className={`bg-blue-50 rounded-lg p-4 border border-blue-200 ${className}`}>
