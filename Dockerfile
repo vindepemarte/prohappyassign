@@ -50,6 +50,7 @@ COPY --from=builder /app/services ./services
 COPY --from=builder /app/middleware ./middleware
 COPY --from=builder /app/utils ./utils
 COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/database ./database
 COPY --from=builder /app/constants.js ./
 COPY --from=builder /app/types.ts ./
 
@@ -67,7 +68,7 @@ EXPOSE 3000
 
 # Add healthcheck
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:3000/api/docs/health || exit 1
+  CMD curl -f http://localhost:3000/health || exit 1
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
