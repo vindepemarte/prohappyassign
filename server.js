@@ -104,9 +104,10 @@ app.options('*', (req, res) => {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Import routes (using dynamic import for ES modules)
+// Import routes and error handling (using dynamic import for ES modules)
 try {
-  console.log('📦 Loading routes...');
+  console.log('📦 Loading routes and middleware...');
+  const { errorHandler } = await import('./middleware/errorHandler.js');
   const { default: authRoutes } = await import('./routes/auth.js');
   const { default: projectRoutes } = await import('./routes/projects.js');
   const { default: notificationRoutes } = await import('./routes/notifications.js');
@@ -120,6 +121,8 @@ try {
   const { default: projectAssignmentRoutes } = await import('./routes/projectAssignment.js');
   const { default: hierarchyOperationsRoutes } = await import('./routes/hierarchyOperations.js');
   const { default: apiDocumentationRoutes } = await import('./routes/apiDocumentation.js');
+  const { default: pricingRoutes } = await import('./routes/pricing.js');
+  const { default: analyticsRoutes } = await import('./routes/analytics.js');
   console.log('✅ All routes loaded successfully');
   
   // API routes with debugging
@@ -141,11 +144,16 @@ try {
   app.use('/api/project-assignment', projectAssignmentRoutes);
   app.use('/api/hierarchy-operations', hierarchyOperationsRoutes);
   app.use('/api/docs', apiDocumentationRoutes);
+  app.use('/api/pricing', pricingRoutes);
+  app.use('/api/analytics', analyticsRoutes);
   console.log('✅ All routes mounted successfully');
   
   // Test that auth routes are working
   console.log('🧪 Testing auth route mounting...');
   console.log('Auth routes should be available at: /api/auth/login, /api/auth/register, /api/auth/me');
+  
+  // Add centralized error handling middleware
+  app.use(errorHandler);
   
   // Catch-all handler for unmatched API routes
   app.use('/api/*', (req, res) => {
@@ -153,7 +161,8 @@ try {
     res.status(404).json({ 
       error: 'API endpoint not found',
       method: req.method,
-      path: req.url
+      path: req.url,
+      timestamp: new Date().toISOString()
     });
   });
 } catch (error) {

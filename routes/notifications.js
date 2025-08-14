@@ -1,6 +1,8 @@
 import express from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
+import { asyncHandler, createValidationError, createPermissionError, createNotFoundError } from '../middleware/errorHandler.js';
+import HierarchyService from '../services/hierarchyService.js';
 
 const router = express.Router();
 
@@ -30,103 +32,82 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Send hierarchy-aware notification
-router.post('/send', authenticateToken, async (req, res) => {
-  try {
-    const { targetUsers, title, body, notificationType = 'general', projectId } = req.body;
-    
-    if (!targetUsers || !Array.isArray(targetUsers) || targetUsers.length === 0) {
-      return res.status(400).json({ error: 'Target users array is required' });
-    }
-    
-    if (!title || !body) {
-      return res.status(400).json({ error: 'Title and body are required' });
-    }
-    
-    // Use the hierarchy notification function
-    const result = await pool.query(
-      'SELECT * FROM send_hierarchy_notification($1, $2, $3, $4, $5, $6)',
-      [req.userId, targetUsers, title, body, notificationType, projectId]
-    );
-    
-    const results = result.rows;
-    const successful = results.filter(r => r.success).length;
-    const failed = results.length - successful;
-    
-    res.json({
-      success: true,
-      message: `Sent ${successful} notifications, ${failed} failed`,
-      data: {
-        total: results.length,
-        successful,
-        failed,
-        results
-      }
-    });
-  } catch (error) {
-    console.error('Error sending hierarchy notification:', error);
-    res.status(500).json({ error: 'Failed to send notifications' });
+router.post('/send', authenticateToken, asyncHandler(async (req, res) => {
+  const { targetUsers, title, body, notificationType = 'general', projectId } = req.body;
+  
+  if (!targetUsers || !Array.isArray(targetUsers) || targetUsers.length === 0) {
+    throw createValidationError('Target users array is required');
   }
-});
+  
+  if (!title || !body) {
+    throw createValidationError('Title and body are required');
+  }
+  
+  // Use the hierarchy service instead of database function
+  const results = await HierarchyService.sendHierarchyNotification(
+    req.userId, targetUsers, title, body, notificationType, projectId
+  );
+  
+  const successful = results.filter(r => r.success).length;
+  const failed = results.length - successful;
+  
+  res.json({
+    success: true,
+    message: `Sent ${successful} notifications, ${failed} failed`,
+    data: {
+      total: results.length,
+      successful,
+      failed,
+      results
+    }
+  });
+}));
 
 // Broadcast notification to all subordinates
-router.post('/broadcast', authenticateToken, async (req, res) => {
-  try {
-    const { title, body, notificationType = 'broadcast', includeClients = true } = req.body;
-    
-    if (!title || !body) {
-      return res.status(400).json({ error: 'Title and body are required' });
-    }
-    
-    // Get all subordinates
-    const subordinatesResult = await pool.query(
-      'SELECT subordinate_id FROM get_user_subordinates($1)',
-      [req.userId]
-    );
-    
-    let targetUsers = subordinatesResult.rows.map(row => row.subordinate_id);
-    
-    // Filter out clients if not included
-    if (!includeClients) {
-      const nonClientUsers = await pool.query(
-        'SELECT id FROM users WHERE id = ANY($1) AND role != $2',
-        [targetUsers, 'client']
-      );
-      targetUsers = nonClientUsers.rows.map(row => row.id);
-    }
-    
-    if (targetUsers.length === 0) {
-      return res.json({
-        success: true,
-        message: 'No subordinates found to broadcast to',
-        data: { total: 0, successful: 0, failed: 0 }
-      });
-    }
-    
-    // Send to all subordinates
-    const result = await pool.query(
-      'SELECT * FROM send_hierarchy_notification($1, $2, $3, $4, $5, $6)',
-      [req.userId, targetUsers, title, body, notificationType, null]
-    );
-    
-    const results = result.rows;
-    const successful = results.filter(r => r.success).length;
-    const failed = results.length - successful;
-    
-    res.json({
-      success: true,
-      message: `Broadcast sent to ${successful} users, ${failed} failed`,
-      data: {
-        total: results.length,
-        successful,
-        failed,
-        results
-      }
-    });
-  } catch (error) {
-    console.error('Error broadcasting notification:', error);
-    res.status(500).json({ error: 'Failed to broadcast notification' });
+router.post('/broadcast', authenticateToken, asyncHandler(async (req, res) => {
+  const { title, body, notificationType = 'broadcast', includeClients = true } = req.body;
+  
+  if (!title || !body) {
+    throw createValidationError('Title and body are required');
   }
-});
+  
+  // Get all subordinates using hierarchy service
+  const subordinates = await HierarchyService.getUserSubordinates(req.userId);
+  let targetUsers = subordinates.map(sub => sub.subordinate_id);
+  
+  // Filter out clients if not included
+  if (!includeClients) {
+    const filteredSubordinates = subordinates.filter(sub => sub.subordinate_role !== 'client');
+    targetUsers = filteredSubordinates.map(sub => sub.subordinate_id);
+  }
+  
+  if (targetUsers.length === 0) {
+    return res.json({
+      success: true,
+      message: 'No subordinates found to broadcast to',
+      data: { total: 0, successful: 0, failed: 0 }
+    });
+  }
+  
+  // Send to all subordinates
+  const results = await HierarchyService.sendHierarchyNotification(
+    req.userId, targetUsers, title, body, notificationType, null
+  );
+  
+  const successful = results.filter(r => r.success).length;
+  const failed = results.length - successful;
+  
+  res.json({
+    success: true,
+    message: `Broadcast sent to ${successful} users, ${failed} failed`,
+    data: {
+      total: results.length,
+      successful,
+      failed,
+      results
+    }
+  });
+}));
 
 // Create notification record (legacy endpoint)
 router.post('/', authenticateToken, async (req, res) => {
@@ -205,41 +186,43 @@ router.get('/failed', authenticateToken, async (req, res) => {
 });
 
 // Get notification history for user with hierarchy context
-router.get('/history/:userId', authenticateToken, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const limit = parseInt(req.query.limit) || 50;
-    const includeRead = req.query.includeRead === 'true';
+router.get('/history/:userId', authenticateToken, asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+  const limit = parseInt(req.query.limit) || 50;
+  const includeRead = req.query.includeRead === 'true';
 
-    let query = `
-      SELECT 
-        nh.*,
-        sender.full_name as sender_name,
-        sender.role as sender_role,
-        p.project_name
-      FROM notification_history nh
-      LEFT JOIN users sender ON nh.sender_id = sender.id
-      LEFT JOIN projects p ON nh.project_id = p.id
-      WHERE nh.user_id = $1
-    `;
-    
-    const params = [userId];
-    
-    if (!includeRead) {
-      query += ' AND nh.is_read = false';
+  // Check if user can access this history
+  if (req.userId !== userId) {
+    const canAccess = await HierarchyService.canSendNotification(req.userId, userId);
+    if (!canAccess) {
+      throw createPermissionError('Cannot access notification history for this user');
     }
-    
-    query += ' ORDER BY nh.created_at DESC LIMIT $2';
-    params.push(limit);
-
-    const result = await pool.query(query, params);
-
-    res.json({ data: result.rows });
-  } catch (error) {
-    console.error('Get notification history error:', error);
-    res.status(500).json({ error: 'Failed to fetch notification history' });
   }
-});
+
+  let query = `
+    SELECT 
+      nh.*,
+      sender.full_name as sender_name,
+      sender.role as sender_role,
+      p.title as project_name
+    FROM notification_history nh
+    LEFT JOIN users sender ON nh.sender_id = sender.id
+    LEFT JOIN projects p ON nh.project_id = p.id
+    WHERE nh.user_id = $1
+  `;
+  
+  const params = [userId];
+  
+  if (!includeRead) {
+    query += ' AND nh.is_read = false';
+  }
+  
+  query += ' ORDER BY nh.created_at DESC LIMIT $2';
+  params.push(limit);
+
+  const result = await pool.query(query, params);
+  res.json({ data: result.rows });
+}));
 
 // Get notification analytics
 router.get('/analytics', authenticateToken, async (req, res) => {
@@ -402,70 +385,56 @@ router.post('/super-worker-notify', authenticateToken, async (req, res) => {
 });
 
 // Send project assignment notification
-router.post('/project-assignment', authenticateToken, async (req, res) => {
-  try {
-    const { assigneeId, projectId, projectName } = req.body;
-    const senderId = req.userId;
+router.post('/project-assignment', authenticateToken, asyncHandler(async (req, res) => {
+  const { assigneeId, projectId, projectName } = req.body;
+  const senderId = req.userId;
 
-    // Verify sender can assign to this user (hierarchy check)
-    const canSendResult = await pool.query(
-      'SELECT can_send_notification($1, $2) as can_send',
-      [senderId, assigneeId]
-    );
-
-    if (!canSendResult.rows[0].can_send) {
-      return res.status(403).json({ error: 'Cannot send notification to this user' });
-    }
-
-    const result = await pool.query(
-      `INSERT INTO notification_history (
-        user_id, sender_id, title, body, notification_type, 
-        project_id, delivery_status
-      ) VALUES ($1, $2, $3, $4, 'project_assignment', $5, 'delivered')
-      RETURNING *`,
-      [
-        assigneeId, 
-        senderId, 
-        'New Project Assignment',
-        `You have been assigned to project: ${projectName}. Please review the details and begin work.`,
-        projectId
-      ]
-    );
-
-    res.json({ 
-      message: 'Project assignment notification sent',
-      data: result.rows[0] 
-    });
-  } catch (error) {
-    console.error('Send project assignment notification error:', error);
-    res.status(500).json({ error: 'Failed to send project assignment notification' });
+  if (!assigneeId || !projectId || !projectName) {
+    throw createValidationError('assigneeId, projectId, and projectName are required');
   }
-});
+
+  // Verify sender can assign to this user (hierarchy check)
+  const canSend = await HierarchyService.canSendNotification(senderId, assigneeId);
+  if (!canSend) {
+    throw createPermissionError('Cannot send notification to this user');
+  }
+
+  const result = await pool.query(
+    `INSERT INTO notification_history (
+      user_id, sender_id, title, body, notification_type, 
+      project_id, delivery_status
+    ) VALUES ($1, $2, $3, $4, 'project_assignment', $5, 'delivered')
+    RETURNING *`,
+    [
+      assigneeId, 
+      senderId, 
+      'New Project Assignment',
+      `You have been assigned to project: ${projectName}. Please review the details and begin work.`,
+      projectId
+    ]
+  );
+
+  res.json({ 
+    message: 'Project assignment notification sent',
+    data: result.rows[0] 
+  });
+}));
 
 // Get user's subordinates for notification targeting
-router.get('/subordinates', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.userId;
+router.get('/subordinates', authenticateToken, asyncHandler(async (req, res) => {
+  const subordinates = await HierarchyService.getUserSubordinates(req.userId);
+  
+  // Format the response to match expected structure
+  const formattedSubordinates = subordinates.map(sub => ({
+    id: sub.subordinate_id,
+    full_name: sub.full_name,
+    email: sub.email,
+    role: sub.subordinate_role,
+    hierarchy_level: sub.hierarchy_level
+  }));
 
-    const result = await pool.query(
-      `SELECT 
-        s.subordinate_id as id,
-        u.full_name,
-        u.email,
-        s.subordinate_role as role,
-        s.hierarchy_level
-      FROM get_user_subordinates($1) s
-      JOIN users u ON s.subordinate_id = u.id
-      ORDER BY s.hierarchy_level, u.full_name`,
-      [userId]
-    );
-
-    res.json({ data: result.rows });
-  } catch (error) {
-    console.error('Get subordinates error:', error);
-    res.status(500).json({ error: 'Failed to fetch subordinates' });
-  }
-});
+  res.json({ data: formattedSubordinates });
+}));
 
 // Get notification preferences
 router.get('/preferences/:userId', authenticateToken, async (req, res) => {

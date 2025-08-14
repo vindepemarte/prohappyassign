@@ -107,6 +107,14 @@ export const usersApi = {
       headers: getAuthHeaders()
     });
     return handleResponse(response);
+  },
+
+  // Get all users (for Super Agent broadcasts)
+  getAll: async () => {
+    const response = await fetch(`${API_BASE}/users`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
   }
 };
 
@@ -236,6 +244,136 @@ export const filesApi = {
   delete: async (fileId: number) => {
     const response = await fetch(`${API_BASE}/files/${fileId}`, {
       method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  }
+};
+
+// Pricing API
+export const pricingApi = {
+  // Calculate pricing for assignment
+  calculate: async (wordCount: number, deadline: string, clientId?: string) => {
+    const response = await fetch(`${API_BASE}/pricing/calculate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ wordCount, deadline, clientId })
+    });
+    return handleResponse(response);
+  },
+
+  // Get Super Agent pricing rates
+  getSuperAgentRates: async () => {
+    const response = await fetch(`${API_BASE}/pricing/super-agent-rates`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Calculate Super Worker earnings
+  calculateSuperWorkerEarnings: async (wordCount: number) => {
+    const response = await fetch(`${API_BASE}/pricing/super-worker-earnings`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ wordCount })
+    });
+    return handleResponse(response);
+  },
+
+  // Get client pricing type
+  getClientPricingType: async (clientId: string) => {
+    const response = await fetch(`${API_BASE}/pricing/client-pricing-type/${clientId}`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Validate pricing request
+  validate: async (wordCount: number, deadline: string) => {
+    const response = await fetch(`${API_BASE}/pricing/validate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ wordCount, deadline })
+    });
+    return handleResponse(response);
+  }
+};
+
+// Analytics API
+export const analyticsApi = {
+  // Get current user's analytics
+  getMyAnalytics: async (period: string = 'all', startDate?: string, endDate?: string) => {
+    let url = `${API_BASE}/analytics/my-analytics?period=${period}`;
+    if (startDate && endDate) {
+      url += `&startDate=${startDate}&endDate=${endDate}`;
+    }
+    const response = await fetch(url, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Get Super Worker analytics
+  getSuperWorkerAnalytics: async (userId: string, startDate?: string, endDate?: string) => {
+    let url = `${API_BASE}/analytics/super-worker/${userId}`;
+    if (startDate && endDate) {
+      url += `?startDate=${startDate}&endDate=${endDate}`;
+    }
+    const response = await fetch(url, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Get Super Agent analytics
+  getSuperAgentAnalytics: async (userId: string, startDate?: string, endDate?: string) => {
+    let url = `${API_BASE}/analytics/super-agent/${userId}`;
+    if (startDate && endDate) {
+      url += `?startDate=${startDate}&endDate=${endDate}`;
+    }
+    const response = await fetch(url, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Get Agent analytics
+  getAgentAnalytics: async (userId: string, startDate?: string, endDate?: string) => {
+    let url = `${API_BASE}/analytics/agent/${userId}`;
+    if (startDate && endDate) {
+      url += `?startDate=${startDate}&endDate=${endDate}`;
+    }
+    const response = await fetch(url, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Get dashboard summary
+  getDashboardSummary: async () => {
+    const response = await fetch(`${API_BASE}/analytics/dashboard-summary`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
+  },
+
+  // Track project earnings
+  trackProjectEarnings: async (projectId: number) => {
+    const response = await fetch(`${API_BASE}/analytics/track-project-earnings`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ projectId })
+    });
+    return handleResponse(response);
+  },
+
+  // Get earnings comparison (Super Agent only)
+  getEarningsComparison: async (startDate?: string, endDate?: string) => {
+    let url = `${API_BASE}/analytics/earnings-comparison`;
+    if (startDate && endDate) {
+      url += `?startDate=${startDate}&endDate=${endDate}`;
+    }
+    const response = await fetch(url, {
       headers: getAuthHeaders()
     });
     return handleResponse(response);

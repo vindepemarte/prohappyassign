@@ -3,7 +3,7 @@
  * Handles deadline-based pricing calculations with urgency charges
  */
 
-import { PRICING_TABLE } from '../constants.js';
+import { SUPER_AGENT_PRICING_TABLE } from '../constants.js';
 
 export class PricingCalculator {
   // Deadline pricing configuration based on requirements
@@ -24,14 +24,14 @@ export class PricingCalculator {
   static calculateBasePrice(wordCount) {
     if (wordCount <= 0) return 0;
 
-    // Defensive check to ensure PRICING_TABLE is available
-    if (!PRICING_TABLE || !Array.isArray(PRICING_TABLE) || PRICING_TABLE.length === 0) {
-      console.error('PRICING_TABLE is not available or empty');
+    // Defensive check to ensure SUPER_AGENT_PRICING_TABLE is available
+    if (!SUPER_AGENT_PRICING_TABLE || !Array.isArray(SUPER_AGENT_PRICING_TABLE) || SUPER_AGENT_PRICING_TABLE.length === 0) {
+      console.error('SUPER_AGENT_PRICING_TABLE is not available or empty');
       return 0;
     }
 
-    const tier = PRICING_TABLE.find(p => wordCount <= p.maxWords);
-    return tier ? tier.price : PRICING_TABLE[PRICING_TABLE.length - 1].price; // Default to max price if over
+    const tier = SUPER_AGENT_PRICING_TABLE.find(p => wordCount <= p.maxWords);
+    return tier ? tier.price : SUPER_AGENT_PRICING_TABLE[SUPER_AGENT_PRICING_TABLE.length - 1].price; // Default to max price if over
   }
 
   /**

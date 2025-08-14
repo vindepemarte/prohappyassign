@@ -13,8 +13,8 @@ export const COLORS = {
   success: '#28a745',
 };
 
-// Pricing table in GBP (£) based on word count
-export const PRICING_TABLE: { maxWords: number; price: number }[] = [
+// Super Agent pricing table in GBP (£) based on word count - FIXED RATES
+export const SUPER_AGENT_PRICING_TABLE: { maxWords: number; price: number }[] = [
     { maxWords: 500, price: 45 },
     { maxWords: 1000, price: 55 },
     { maxWords: 1500, price: 65 },
@@ -56,6 +56,9 @@ export const PRICING_TABLE: { maxWords: number; price: number }[] = [
     { maxWords: 19500, price: 430 },
     { maxWords: 20000, price: 440 },
 ];
+
+// Legacy pricing table (for backward compatibility)
+export const PRICING_TABLE = SUPER_AGENT_PRICING_TABLE;
 
 // NOTE: This is a hardcoded exchange rate. In a production environment,
 // this should be fetched from a reliable currency conversion API.

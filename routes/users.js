@@ -1,6 +1,8 @@
 import express from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
+import { asyncHandler, createValidationError, createPermissionError } from '../middleware/errorHandler.js';
+import HierarchyService from '../services/hierarchyService.js';
 
 const router = express.Router();
 
@@ -52,24 +54,38 @@ router.post('/by-ids', authenticateToken, async (req, res) => {
 });
 
 // Get users by role
-router.get('/by-role/:role', authenticateToken, async (req, res) => {
-  try {
-    const { role } = req.params;
+router.get('/by-role/:role', authenticateToken, asyncHandler(async (req, res) => {
+  const { role } = req.params;
 
-    if (!role || !['client', 'worker', 'agent'].includes(role)) {
-      return res.status(400).json({ error: 'Valid role is required (client, worker, agent)' });
-    }
-
-    const result = await pool.query(
-      'SELECT id, full_name, email, role FROM users WHERE role = $1',
-      [role]
-    );
-
-    res.json({ data: result.rows });
-  } catch (error) {
-    console.error('Get users by role error:', error);
-    res.status(500).json({ error: 'Failed to fetch users by role' });
+  const validRoles = ['client', 'worker', 'agent', 'super_worker', 'super_agent'];
+  if (!role || !validRoles.includes(role)) {
+    throw createValidationError(`Valid role is required (${validRoles.join(', ')})`);
   }
-});
+
+  const users = await HierarchyService.getUsersByRole(role);
+  res.json({ data: users });
+}));
+
+// Get all users (Super Agent only)
+router.get('/', authenticateToken, asyncHandler(async (req, res) => {
+  // Check if user is Super Agent
+  const userInfo = await HierarchyService.getUserInfo(req.userId);
+  if (!userInfo || userInfo.role !== 'super_agent') {
+    throw createPermissionError('Only Super Agents can access all users');
+  }
+
+  const users = await HierarchyService.getAllUsers();
+  res.json({ data: users });
+}));
+
+// Get current user info
+router.get('/me', authenticateToken, asyncHandler(async (req, res) => {
+  const userInfo = await HierarchyService.getUserHierarchyInfo(req.userId);
+  if (!userInfo) {
+    throw createNotFoundError('User');
+  }
+  
+  res.json({ data: userInfo });
+}));
 
 export default router;
