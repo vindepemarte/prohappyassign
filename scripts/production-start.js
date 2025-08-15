@@ -25,8 +25,29 @@ async function productionStart() {
 
         // 2. Check if migrations are needed
         console.log('📋 Step 2: Setting up database schema...');
-        console.log('📋 Setting up database schema...');
         try {
+            // First, let's verify the database structure
+            console.log('🔍 Checking database structure...');
+            
+            // Check if users table exists
+            const usersTableCheck = await pool.query(`
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_name = 'users'
+                )
+            `);
+            console.log(`Users table exists: ${usersTableCheck.rows[0].exists}`);
+            
+            // Check if role column exists
+            const roleColumnCheck = await pool.query(`
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'users' AND column_name = 'role'
+                )
+            `);
+            console.log(`Role column exists: ${roleColumnCheck.rows[0].exists}`);
+            
+            // Check migration count
             const migrationCheck = await pool.query('SELECT COUNT(*) FROM schema_migrations');
             const migrationCount = parseInt(migrationCheck.rows[0].count);
             console.log(`✅ Found ${migrationCount} migrations in database`);
@@ -48,9 +69,12 @@ async function productionStart() {
                         }
                     });
                 });
+            } else {
+                console.log('✅ All migrations already applied, skipping migration step');
             }
         } catch (error) {
-            console.log('⚠️  Schema migrations table not found, running migrations...');
+            console.log('⚠️  Error checking database schema:', error.message);
+            console.log('⚠️  Attempting to run migrations anyway...');
             const migrationProcess = spawn('node', ['scripts/run-migrations.js'], {
                 stdio: 'inherit',
                 env: process.env
@@ -62,7 +86,7 @@ async function productionStart() {
                         console.log('✅ Migrations completed successfully');
                         resolve();
                     } else {
-                        reject(new Error(`Database setup failed`));
+                        reject(new Error(`Database setup failed: ${error.message}`));
                     }
                 });
             });

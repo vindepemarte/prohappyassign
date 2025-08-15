@@ -70,8 +70,28 @@ const runMigration = async (filepath, filename) => {
       return;
     }
     
+    // Add debugging for the first migration
+    if (filename === '000_base_schema.sql') {
+      console.log('🔍 About to run base schema migration...');
+      
+      // Check if users table already exists
+      try {
+        const tableCheck = await pool.query(`
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_name = 'users'
+          )
+        `);
+        console.log(`Users table exists before migration: ${tableCheck.rows[0].exists}`);
+      } catch (e) {
+        console.log('Could not check users table existence:', e.message);
+      }
+    }
+    
     // Read and execute migration
     const sql = fs.readFileSync(filepath, 'utf8');
+    console.log(`📄 Migration ${filename} size: ${sql.length} characters`);
+    
     await pool.query(sql);
     
     // Record successful execution
@@ -79,7 +99,8 @@ const runMigration = async (filepath, filename) => {
     console.log(`✅ Completed migration: ${filename}`);
     
   } catch (error) {
-    console.error(`❌ Failed to run migration ${filename}:`, error);
+    console.error(`❌ Failed to run migration ${filename}:`, error.message);
+    console.error(`❌ Error details:`, error);
     throw error;
   }
 };
