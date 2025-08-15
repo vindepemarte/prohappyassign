@@ -24,13 +24,14 @@ async function productionStart() {
         console.log('✅ Database connection successful');
 
         // 2. Check if migrations are needed
-        console.log('📋 Step 2: Checking database schema...');
+        console.log('📋 Step 2: Setting up database schema...');
+        console.log('📋 Setting up database schema...');
         try {
-            const migrationCheck = await pool.query('SELECT COUNT(*) FROM migration_tracking');
+            const migrationCheck = await pool.query('SELECT COUNT(*) FROM schema_migrations');
             const migrationCount = parseInt(migrationCheck.rows[0].count);
             console.log(`✅ Found ${migrationCount} migrations in database`);
             
-            if (migrationCount < 8) {
+            if (migrationCount < 10) {
                 console.log('⚠️  Running database migrations...');
                 const migrationProcess = spawn('node', ['scripts/run-migrations.js'], {
                     stdio: 'inherit',
@@ -49,7 +50,7 @@ async function productionStart() {
                 });
             }
         } catch (error) {
-            console.log('⚠️  Migration tracking table not found, running migrations...');
+            console.log('⚠️  Schema migrations table not found, running migrations...');
             const migrationProcess = spawn('node', ['scripts/run-migrations.js'], {
                 stdio: 'inherit',
                 env: process.env
@@ -61,7 +62,7 @@ async function productionStart() {
                         console.log('✅ Migrations completed successfully');
                         resolve();
                     } else {
-                        reject(new Error(`Migration process exited with code ${code}`));
+                        reject(new Error(`Database setup failed`));
                     }
                 });
             });
