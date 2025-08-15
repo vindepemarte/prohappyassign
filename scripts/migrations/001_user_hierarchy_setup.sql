@@ -4,84 +4,33 @@
 
 BEGIN;
 
--- 1. Update user_role enum to include new roles
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'super_agent';
-ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'super_worker';
+-- 1. The user_role enum and users table are already created in 000_base_schema.sql
+-- This migration now focuses on additional hierarchy-specific tables and relationships
 
--- 2. Add new columns to users table for hierarchy
-ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS email VARCHAR(255),
-ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255),
-ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false,
-ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW(),
-ADD COLUMN IF NOT EXISTS reference_code_used VARCHAR(20),
-ADD COLUMN IF NOT EXISTS recruited_by UUID REFERENCES users(id),
-ADD COLUMN IF NOT EXISTS super_agent_id UUID REFERENCES users(id);
+-- 2. Verify that the base tables exist (this will fail gracefully if they don't)
+DO $$ 
+BEGIN
+    -- Check if users table exists with role column
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                   WHERE table_name = 'users' AND column_name = 'role') THEN
+        RAISE EXCEPTION 'Base schema not found. Please run 000_base_schema.sql first.';
+    END IF;
+END $$;
 
--- 3. Create reference_codes table
-CREATE TABLE IF NOT EXISTS reference_codes (
-    id SERIAL PRIMARY KEY,
-    code VARCHAR(20) UNIQUE NOT NULL,
-    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    code_type VARCHAR(20) NOT NULL CHECK (code_type IN ('agent_recruitment', 'client_recruitment', 'worker_recruitment')),
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
+-- 3. The reference_codes table is already created in 000_base_schema.sql
 
--- 4. Create user_hierarchy table
-CREATE TABLE IF NOT EXISTS user_hierarchy (
-    id SERIAL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    parent_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    hierarchy_level INTEGER NOT NULL,
-    super_agent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(user_id)
-);
+-- 4. The user_hierarchy table is already created in 000_base_schema.sql
 
--- 5. Create agent_pricing table
-CREATE TABLE IF NOT EXISTS agent_pricing (
-    id SERIAL PRIMARY KEY,
-    agent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    min_word_count INTEGER DEFAULT 500,
-    max_word_count INTEGER DEFAULT 20000,
-    base_rate_per_500_words DECIMAL(10,2) NOT NULL DEFAULT 6.25,
-    agent_fee_percentage DECIMAL(5,2) NOT NULL DEFAULT 15.00,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    UNIQUE(agent_id)
-);
+-- 5. The agent_pricing table is already created in 000_base_schema.sql
 
--- 6. Create user_sessions table (if not exists)
-CREATE TABLE IF NOT EXISTS user_sessions (
-    id SERIAL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash VARCHAR(64) NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    user_agent TEXT,
-    ip_address INET,
-    last_used_at TIMESTAMP DEFAULT NOW(),
-    created_at TIMESTAMP DEFAULT NOW()
-);
+-- 6. The user_sessions table is already created in 000_base_schema.sql
 
 -- 7. Add new columns to projects table
 ALTER TABLE projects 
 ADD COLUMN IF NOT EXISTS sub_worker_id UUID REFERENCES users(id),
 ADD COLUMN IF NOT EXISTS sub_agent_id UUID REFERENCES users(id);
 
--- 8. Create assignments table (if not exists)
-CREATE TABLE IF NOT EXISTS assignments (
-    id SERIAL PRIMARY KEY,
-    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    assigned_by UUID NOT NULL REFERENCES users(id),
-    assigned_to UUID NOT NULL REFERENCES users(id),
-    project_numbers TEXT,
-    assignment_type VARCHAR(20) DEFAULT 'worker_assignment',
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
+-- 8. The assignments table is already created in 000_base_schema.sql
 
 -- 9. Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_reference_codes_owner_id ON reference_codes(owner_id);

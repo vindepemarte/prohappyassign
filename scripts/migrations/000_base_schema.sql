@@ -179,6 +179,53 @@ CREATE TABLE hierarchy_change_log (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Create reference_codes table
+CREATE TABLE reference_codes (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code_type VARCHAR(20) NOT NULL CHECK (code_type IN ('agent_recruitment', 'client_recruitment', 'worker_recruitment')),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create user_hierarchy table
+CREATE TABLE user_hierarchy (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    hierarchy_level INTEGER NOT NULL,
+    super_agent_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id)
+);
+
+-- Create user_sessions table
+CREATE TABLE user_sessions (
+    id SERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    user_agent TEXT,
+    ip_address INET,
+    last_used_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Create assignments table
+CREATE TABLE assignments (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    assigned_by UUID NOT NULL REFERENCES users(id),
+    assigned_to UUID NOT NULL REFERENCES users(id),
+    project_numbers TEXT,
+    assignment_type VARCHAR(20) DEFAULT 'worker_assignment',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Create migration tracking table
 CREATE TABLE migration_tracking (
     id SERIAL PRIMARY KEY,
@@ -203,6 +250,18 @@ CREATE INDEX idx_notification_history_is_read ON notification_history(is_read);
 CREATE INDEX idx_agent_pricing_agent_id ON agent_pricing(agent_id);
 CREATE INDEX idx_hierarchy_change_log_user_id ON hierarchy_change_log(user_id);
 CREATE INDEX idx_hierarchy_change_log_changed_by ON hierarchy_change_log(changed_by);
+CREATE INDEX idx_reference_codes_owner_id ON reference_codes(owner_id);
+CREATE INDEX idx_reference_codes_code ON reference_codes(code);
+CREATE INDEX idx_reference_codes_active ON reference_codes(is_active) WHERE is_active = true;
+CREATE INDEX idx_user_hierarchy_user_id ON user_hierarchy(user_id);
+CREATE INDEX idx_user_hierarchy_parent_id ON user_hierarchy(parent_id);
+CREATE INDEX idx_user_hierarchy_super_agent_id ON user_hierarchy(super_agent_id);
+CREATE INDEX idx_user_sessions_user_id ON user_sessions(user_id);
+CREATE INDEX idx_user_sessions_token_hash ON user_sessions(token_hash);
+CREATE INDEX idx_user_sessions_expires_at ON user_sessions(expires_at);
+CREATE INDEX idx_assignments_project_id ON assignments(project_id);
+CREATE INDEX idx_assignments_assigned_by ON assignments(assigned_by);
+CREATE INDEX idx_assignments_assigned_to ON assignments(assigned_to);
 
 -- Create updated_at trigger function
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -236,6 +295,18 @@ CREATE TRIGGER update_super_agent_pricing_updated_at
 
 CREATE TRIGGER update_notification_history_updated_at 
     BEFORE UPDATE ON notification_history 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_reference_codes_updated_at 
+    BEFORE UPDATE ON reference_codes 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_user_hierarchy_updated_at 
+    BEFORE UPDATE ON user_hierarchy 
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_assignments_updated_at 
+    BEFORE UPDATE ON assignments 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 COMMIT;
