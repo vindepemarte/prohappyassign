@@ -1,7 +1,7 @@
 import express from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
-// Use local authenticateToken function
+// Use local authenticateTokenLocal function
 const authenticateTokenLocal = (req, res, next) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   
@@ -32,7 +32,7 @@ const pool = new Pool({
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Using authenticateToken from middleware/auth.js
+// Using local authenticateTokenLocal function
 
 // Get current user's role and hierarchy info
 const getUserInfo = async (userId) => {
@@ -47,7 +47,7 @@ const getUserInfo = async (userId) => {
 };
 
 // Get user's hierarchy information
-router.get('/my-hierarchy', authenticateToken, async (req, res) => {
+router.get('/my-hierarchy', authenticateTokenLocal, async (req, res) => {
   try {
     const { default: HierarchyService } = await import('../services/hierarchyService.js');
     const hierarchyInfo = await HierarchyService.getUserHierarchyInfo(req.userId);
@@ -64,7 +64,7 @@ router.get('/my-hierarchy', authenticateToken, async (req, res) => {
 });
 
 // Get user's network (subordinates)
-router.get('/my-network', authenticateToken, async (req, res) => {
+router.get('/my-network', authenticateTokenLocal, async (req, res) => {
   try {
     const { default: HierarchyService } = await import('../services/hierarchyService.js');
     const network = await HierarchyService.getUserNetwork(req.userId);
@@ -77,7 +77,7 @@ router.get('/my-network', authenticateToken, async (req, res) => {
 });
 
 // Get hierarchy path (from user up to super agent)
-router.get('/my-path', authenticateToken, async (req, res) => {
+router.get('/my-path', authenticateTokenLocal, async (req, res) => {
   try {
     const { default: HierarchyService } = await import('../services/hierarchyService.js');
     const path = await HierarchyService.getHierarchyPath(req.userId);
@@ -90,7 +90,7 @@ router.get('/my-path', authenticateToken, async (req, res) => {
 });
 
 // Get hierarchy statistics
-router.get('/my-stats', authenticateToken, async (req, res) => {
+router.get('/my-stats', authenticateTokenLocal, async (req, res) => {
   try {
     const { default: HierarchyService } = await import('../services/hierarchyService.js');
     const stats = await HierarchyService.getHierarchyStats(req.userId);
@@ -105,11 +105,20 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
 // Get super agent's full network (super agents only)
 router.get('/super-agent-network', authenticateTokenLocal, requireRole(['super_agent']), async (req, res) => {
   try {
+    // Get all users in the super agent's network
+    const networkResult = await pool.query(`
+      SELECT 
+        u.id, u.full_name, u.email, u.role, u.created_at,
+        uh.hierarchy_level, uh.parent_id,
+        parent.full_name as parent_name
+      FROM users u
+      LEFT JOIN user_hierarchy uh ON u.id = uh.user_id
+      LEFT JOIN users parent ON uh.parent_id = parent.id
+      WHERE uh.super_agent_id = $1 OR u.id = $1
+      ORDER BY uh.hierarchy_level, u.full_name
+    `, [req.userId]);
 
-    const { default: HierarchyService } = await import('../services/hierarchyService.js');
-    const network = await HierarchyService.getSuperAgentNetwork(req.userId);
-
-    res.json({ data: network });
+    res.json({ data: networkResult.rows });
   } catch (error) {
     console.error('Get super agent network error:', error);
     res.status(500).json({ error: 'Failed to fetch super agent network' });
@@ -117,7 +126,7 @@ router.get('/super-agent-network', authenticateTokenLocal, requireRole(['super_a
 });
 
 // Update user hierarchy (reassign user to new parent)
-router.patch('/reassign-user', authenticateToken, requirePermission(PERMISSIONS.REASSIGN_USERS), async (req, res) => {
+router.patch('/reassign-user', authenticateTokenLocal, requirePermission(PERMISSIONS.REASSIGN_USERS), async (req, res) => {
   try {
     const { userId, newParentId } = req.body;
 
@@ -148,7 +157,7 @@ router.patch('/reassign-user', authenticateToken, requirePermission(PERMISSIONS.
 });
 
 // Check if user can access another user's data
-router.post('/check-access', authenticateToken, async (req, res) => {
+router.post('/check-access', authenticateTokenLocal, async (req, res) => {
   try {
     const { targetUserId } = req.body;
 
@@ -167,7 +176,7 @@ router.post('/check-access', authenticateToken, async (req, res) => {
 });
 
 // Get user details by ID (with access control)
-router.get('/user/:userId', authenticateToken, requireUserAccess, async (req, res) => {
+router.get('/user/:userId', authenticateTokenLocal, requireUserAccess, async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -198,7 +207,7 @@ router.get('/user/:userId', authenticateToken, requireUserAccess, async (req, re
 });
 
 // Search users in hierarchy (with access control)
-router.get('/search-users', authenticateToken, async (req, res) => {
+router.get('/search-users', authenticateTokenLocal, async (req, res) => {
   try {
     const { q: searchTerm, role, limit = 10 } = req.query;
 
@@ -253,7 +262,7 @@ router.get('/search-users', authenticateToken, async (req, res) => {
 });
 
 // Validate hierarchy integrity (super agents only)
-router.get('/validate-integrity', authenticateToken, requirePermission(PERMISSIONS.SYSTEM_ADMIN), async (req, res) => {
+router.get('/validate-integrity', authenticateTokenLocal, requirePermission(PERMISSIONS.SYSTEM_ADMIN), async (req, res) => {
   try {
 
     const { default: HierarchyService } = await import('../services/hierarchyService.js');
@@ -267,7 +276,7 @@ router.get('/validate-integrity', authenticateToken, requirePermission(PERMISSIO
 });
 
 // Get hierarchy overview (super agents only)
-router.get('/overview', authenticateToken, requirePermission(PERMISSIONS.VIEW_ANALYTICS), async (req, res) => {
+router.get('/overview', authenticateTokenLocal, requirePermission(PERMISSIONS.VIEW_ANALYTICS), async (req, res) => {
   try {
 
     // Get hierarchy overview statistics
@@ -299,7 +308,7 @@ router.get('/overview', authenticateToken, requirePermission(PERMISSIONS.VIEW_AN
 });
 
 // Get user's direct subordinates
-router.get('/my-subordinates', authenticateToken, requirePermission(PERMISSIONS.VIEW_HIERARCHY), async (req, res) => {
+router.get('/my-subordinates', authenticateTokenLocal, requirePermission(PERMISSIONS.VIEW_HIERARCHY), async (req, res) => {
   try {
     const userId = req.user.id;
 
