@@ -56,8 +56,8 @@ router.get('/by-role/:role', authenticateToken, async (req, res) => {
   try {
     const { role } = req.params;
 
-    if (!role || !['client', 'worker', 'agent'].includes(role)) {
-      return res.status(400).json({ error: 'Valid role is required (client, worker, agent)' });
+    if (!role || !['client', 'worker', 'agent', 'super_agent', 'super_worker'].includes(role)) {
+      return res.status(400).json({ error: 'Valid role is required (client, worker, agent, super_agent, super_worker)' });
     }
 
     const result = await pool.query(
@@ -69,6 +69,35 @@ router.get('/by-role/:role', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Get users by role error:', error);
     res.status(500).json({ error: 'Failed to fetch users by role' });
+  }
+});
+
+// Get all users (for super_agent broadcast notifications)
+router.get('/all', authenticateToken, async (req, res) => {
+  try {
+    // Check if user has permission to get all users (super_agent only)
+    const userResult = await pool.query(
+      'SELECT role FROM users WHERE id = $1',
+      [req.userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const userRole = userResult.rows[0].role;
+    if (userRole !== 'super_agent') {
+      return res.status(403).json({ error: 'Only super agents can access all users' });
+    }
+
+    const result = await pool.query(
+      'SELECT id, full_name, email, role FROM users ORDER BY created_at DESC'
+    );
+
+    res.json({ data: result.rows });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({ error: 'Failed to fetch all users' });
   }
 });
 

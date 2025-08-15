@@ -107,6 +107,14 @@ export const usersApi = {
       headers: getAuthHeaders()
     });
     return handleResponse(response);
+  },
+
+  // Get all users (super_agent only)
+  getAll: async () => {
+    const response = await fetch(`${API_BASE}/users/all`, {
+      headers: getAuthHeaders()
+    });
+    return handleResponse(response);
   }
 };
 

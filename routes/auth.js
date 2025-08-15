@@ -272,13 +272,18 @@ router.post('/register', async (req, res) => {
 
       const hierarchyInfo = hierarchyResult.rows[0];
 
-      // Generate reference codes for new agents and super_workers
-      if (['agent', 'super_worker'].includes(userRole)) {
-        const codes = await ReferenceCodeService.generateCodesForUser(user.id, userRole);
-        console.log(`Generated ${codes.length} reference codes for new ${userRole}`);
-      }
-
       await client.query('COMMIT');
+
+      // Generate reference codes for new agents and super_workers (after commit)
+      if (['agent', 'super_worker'].includes(userRole)) {
+        try {
+          const codes = await ReferenceCodeService.generateCodesForUser(user.id, userRole);
+          console.log(`Generated ${codes.length} reference codes for new ${userRole}`);
+        } catch (codeError) {
+          console.error('Failed to generate reference codes (non-critical):', codeError);
+          // Don't fail registration if reference code generation fails
+        }
+      }
 
       // Generate token with hierarchy information
       const token = generateToken(user.id, userRole, hierarchyInfo);

@@ -140,9 +140,42 @@ router.get('/my-stats', authenticateTokenLocal, async (req, res) => {
   }
 });
 
+// Test endpoint without middleware
+router.get('/test', (req, res) => {
+  res.json({ message: 'Hierarchy routes working', timestamp: new Date().toISOString() });
+});
+
 // Get super agent's full network (super agents only)
-router.get('/super-agent-network', authenticateTokenLocal, requireRole(['super_agent']), async (req, res) => {
+router.get('/super-agent-network', async (req, res) => {
   try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Access token required' });
+    }
+
+    // Verify JWT token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (!decoded || !decoded.userId) {
+      return res.status(403).json({ error: 'Invalid token format' });
+    }
+
+    // Get user info from database
+    const userResult = await pool.query(
+      'SELECT id, role FROM users WHERE id = $1',
+      [decoded.userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(403).json({ error: 'User not found' });
+    }
+
+    const user = userResult.rows[0];
+    
+    if (user.role !== 'super_agent') {
+      return res.status(403).json({ error: 'Super agent role required' });
+    }
+
     // Get all users in the super agent's network
     const networkResult = await pool.query(`
       SELECT 
@@ -154,12 +187,12 @@ router.get('/super-agent-network', authenticateTokenLocal, requireRole(['super_a
       LEFT JOIN users parent ON uh.parent_id = parent.id
       WHERE uh.super_agent_id = $1 OR u.id = $1
       ORDER BY uh.hierarchy_level, u.full_name
-    `, [req.userId]);
+    `, [user.id]);
 
     res.json({ data: networkResult.rows });
   } catch (error) {
     console.error('Get super agent network error:', error);
-    res.status(500).json({ error: 'Failed to fetch super agent network' });
+    res.status(500).json({ error: 'Failed to fetch super agent network', details: error.message });
   }
 });
 

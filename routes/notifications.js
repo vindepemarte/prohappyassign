@@ -216,7 +216,7 @@ router.get('/history/:userId', authenticateToken, async (req, res) => {
         nh.*,
         sender.full_name as sender_name,
         sender.role as sender_role,
-        p.project_name
+        p.title as project_name
       FROM notification_history nh
       LEFT JOIN users sender ON nh.sender_id = sender.id
       LEFT JOIN projects p ON nh.project_id = p.id

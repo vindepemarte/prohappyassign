@@ -84,7 +84,7 @@ export class ReferenceCodeService {
   /**
    * Generate a unique reference code with given prefix
    */
-  static async generateUniqueCode(prefix, client) {
+  static async generateUniqueCode(prefix, client = null) {
     const maxAttempts = 10;
     let attempts = 0;
     
@@ -94,8 +94,8 @@ export class ReferenceCodeService {
       const code = `${prefix}-${suffix}`;
       
       // Check if code already exists
-      const queryClient = client || { query };
-      const existsResult = await queryClient.query(
+      const queryMethod = client ? client.query.bind(client) : query;
+      const existsResult = await queryMethod(
         'SELECT COUNT(*) as count FROM reference_codes WHERE code = $1',
         [code]
       );
