@@ -1,7 +1,24 @@
 import express from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
-import { authenticateToken } from '../middleware/auth.js';
+// Use local authenticateToken function
+const authenticateTokenLocal = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Authorization token required' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    req.userRole = decoded.role;
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
+  }
+};
 import { requirePermission, requireRole, requireUserAccess } from '../middleware/permissions.js';
 import { PERMISSIONS } from '../services/permissionService.js';
 
@@ -86,7 +103,7 @@ router.get('/my-stats', authenticateToken, async (req, res) => {
 });
 
 // Get super agent's full network (super agents only)
-router.get('/super-agent-network', authenticateToken, requireRole(['super_agent']), async (req, res) => {
+router.get('/super-agent-network', authenticateTokenLocal, requireRole(['super_agent']), async (req, res) => {
   try {
 
     const { default: HierarchyService } = await import('../services/hierarchyService.js');
