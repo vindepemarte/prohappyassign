@@ -23,13 +23,12 @@ async function productionStart() {
         await pool.query('SELECT 1');
         console.log('✅ Database connection successful');
 
-        // 2. Check if migrations are needed
-        console.log('📋 Step 2: Setting up database schema...');
+        // 2. Verify database schema is ready
+        console.log('📋 Step 2: Verifying database schema...');
         try {
-            // First, let's verify the database structure
+            // Check if users table exists with role column
             console.log('🔍 Checking database structure...');
             
-            // Check if users table exists
             const usersTableCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM information_schema.tables 
@@ -38,7 +37,10 @@ async function productionStart() {
             `);
             console.log(`Users table exists: ${usersTableCheck.rows[0].exists}`);
             
-            // Check if role column exists
+            if (!usersTableCheck.rows[0].exists) {
+                throw new Error('Users table does not exist - database not properly initialized');
+            }
+            
             const roleColumnCheck = await pool.query(`
                 SELECT EXISTS (
                     SELECT 1 FROM information_schema.columns 
@@ -47,49 +49,31 @@ async function productionStart() {
             `);
             console.log(`Role column exists: ${roleColumnCheck.rows[0].exists}`);
             
-            // Check migration count
-            const migrationCheck = await pool.query('SELECT COUNT(*) FROM schema_migrations');
-            const migrationCount = parseInt(migrationCheck.rows[0].count);
-            console.log(`✅ Found ${migrationCount} migrations in database`);
-            
-            if (migrationCount < 10) {
-                console.log('⚠️  Running database migrations...');
-                const migrationProcess = spawn('node', ['scripts/run-migrations.js'], {
-                    stdio: 'inherit',
-                    env: process.env
-                });
-                
-                await new Promise((resolve, reject) => {
-                    migrationProcess.on('close', (code) => {
-                        if (code === 0) {
-                            console.log('✅ Migrations completed successfully');
-                            resolve();
-                        } else {
-                            reject(new Error(`Migration process exited with code ${code}`));
-                        }
-                    });
-                });
-            } else {
-                console.log('✅ All migrations already applied, skipping migration step');
+            if (!roleColumnCheck.rows[0].exists) {
+                throw new Error('Role column does not exist in users table - database not properly initialized');
             }
-        } catch (error) {
-            console.log('⚠️  Error checking database schema:', error.message);
-            console.log('⚠️  Attempting to run migrations anyway...');
-            const migrationProcess = spawn('node', ['scripts/run-migrations.js'], {
-                stdio: 'inherit',
-                env: process.env
-            });
             
-            await new Promise((resolve, reject) => {
-                migrationProcess.on('close', (code) => {
-                    if (code === 0) {
-                        console.log('✅ Migrations completed successfully');
-                        resolve();
-                    } else {
-                        reject(new Error(`Database setup failed: ${error.message}`));
-                    }
-                });
-            });
+            // Check if we have the schema_migrations table
+            const migrationTableCheck = await pool.query(`
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_name = 'schema_migrations'
+                )
+            `);
+            console.log(`Schema migrations table exists: ${migrationTableCheck.rows[0].exists}`);
+            
+            if (migrationTableCheck.rows[0].exists) {
+                const migrationCount = await pool.query('SELECT COUNT(*) FROM schema_migrations');
+                console.log(`✅ Found ${migrationCount.rows[0].count} migrations in database`);
+            }
+            
+            console.log('✅ Database schema verification completed successfully');
+            
+        } catch (error) {
+            console.error('❌ Database schema verification failed:', error.message);
+            console.log('🔧 Database appears to need initialization. This should be done manually.');
+            console.log('📋 Required tables: users (with role column), projects, agent_pricing, etc.');
+            throw new Error(`Database schema verification failed: ${error.message}`);
         }
 
         // 3. Check if we need to create initial data
