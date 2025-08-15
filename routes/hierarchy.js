@@ -1,24 +1,6 @@
 import express from 'express';
 import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
-// Use local authenticateTokenLocal function
-const authenticateTokenLocal = (req, res, next) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  
-  if (!token) {
-    return res.status(401).json({ error: 'Authorization token required' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.userId = decoded.userId;
-    req.userRole = decoded.role;
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
-  }
-};
 import { requirePermission, requireRole, requireUserAccess } from '../middleware/permissions.js';
 import { PERMISSIONS } from '../services/permissionService.js';
 
@@ -31,6 +13,62 @@ const pool = new Pool({
 });
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// Enhanced authentication middleware
+const authenticateTokenLocal = (req, res, next) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  // Use async function inside middleware
+  (async () => {
+    try {
+      // Verify JWT token
+      const decoded = jwt.verify(token, JWT_SECRET);
+      if (!decoded) {
+        return res.status(403).json({ error: 'Invalid token' });
+      }
+
+      // Get user info from database to ensure it's current
+      const userResult = await pool.query(
+        `SELECT u.id, u.email, u.full_name, u.role, u.avatar_url, u.email_verified,
+                uh.hierarchy_level, uh.parent_id, uh.super_agent_id
+         FROM users u
+         LEFT JOIN user_hierarchy uh ON u.id = uh.user_id
+         WHERE u.id = $1`,
+        [decoded.userId]
+      );
+
+      if (userResult.rows.length === 0) {
+        return res.status(403).json({ error: 'User not found' });
+      }
+
+      const user = userResult.rows[0];
+      
+      // Add user info to request
+      req.userId = user.id;
+      req.userRole = user.role;
+      req.user = {
+        id: user.id,
+        email: user.email,
+        full_name: user.full_name,
+        role: user.role,
+        hierarchy: {
+          level: user.hierarchy_level,
+          parent_id: user.parent_id,
+          super_agent_id: user.super_agent_id
+        }
+      };
+      
+      next();
+    } catch (error) {
+      console.error('Authentication error:', error);
+      return res.status(403).json({ error: 'Authentication failed' });
+    }
+  })();
+};
 
 // Using local authenticateTokenLocal function
 
